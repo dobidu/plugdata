@@ -269,6 +269,9 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     }
     touchSelectionHelper->setAlwaysOnTop(true);
 
+    promptBar = std::make_unique<PromptBar>();
+    addAndMakeVisible(promptBar.get());
+
     statusbar->setAlwaysOnTop(true);
     addAndMakeVisible(statusbar.get());
 
@@ -601,6 +604,8 @@ void PluginEditor::resized()
     undoButton.setBounds(buttonDistance + offset, 0, buttonSize, buttonSize);
     redoButton.setBounds(2 * buttonDistance + offset, 0, buttonSize, buttonSize);
     addObjectMenuButton.setBounds(3 * buttonDistance + offset, 0, buttonSize, buttonSize);
+
+    promptBar->setBounds(0, getHeight() - 92, getWidth(), 36);
 
     auto statusbarBounds = getLocalBounds().removeFromBottom(46).translated(0, -10);
     if (SettingsFile::getInstance()->isUsingTouchMode()) {

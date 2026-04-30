@@ -1,0 +1,73 @@
+name: pd-repente CI
+
+on:
+  push:
+    branches: [pd-repente-main]
+  pull_request:
+    branches: [pd-repente-main]
+  workflow_dispatch:
+
+env:
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
+
+jobs:
+  linux-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libasound2-dev libx11-dev libxrandr-dev \
+            libxinerama-dev libxcursor-dev libfreetype6-dev libcurl4-openssl-dev \
+            libwebkit2gtk-4.1-dev libgtk-3-dev
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: linux-pd-repente
+          max-size: 600M
+
+      - name: Configure
+        run: cmake -Bbuild -GNinja -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_TESTING=ON
+
+      - name: Build
+        run: cmake --build build --config Release
+
+  macos-build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: macos-pd-repente
+          max-size: 600M
+
+      - name: Configure
+        run: cmake -Bbuild -GNinja -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DENABLE_TESTING=ON
+
+      - name: Build
+        run: cmake --build build --config Release
+
+  windows-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Configure
+        run: cmake -Bbuild -DENABLE_TESTING=ON
+
+      - name: Build
+        run: cmake --build build --config Release

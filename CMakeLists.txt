@@ -254,6 +254,16 @@ file(GLOB plugdata_sources
     ${SOURCES_DIRECTORY}/Standalone/InternalSynth.cpp
     ${SOURCES_DIRECTORY}/Standalone/PlugDataApp.h
     ${SOURCES_DIRECTORY}/Standalone/PlugDataWindow.h
+    ${SOURCES_DIRECTORY}/RepentePd/UI/*.h
+    ${SOURCES_DIRECTORY}/RepentePd/UI/*.cpp
+    ${SOURCES_DIRECTORY}/RepentePd/Core/*.h
+    ${SOURCES_DIRECTORY}/RepentePd/Core/*.cpp
+    ${SOURCES_DIRECTORY}/RepentePd/Bridge/*.h
+    ${SOURCES_DIRECTORY}/RepentePd/Bridge/*.cpp
+    ${SOURCES_DIRECTORY}/RepentePd/Commands/*.h
+    ${SOURCES_DIRECTORY}/RepentePd/Commands/*.cpp
+    ${SOURCES_DIRECTORY}/RepentePd/Integration/*.h
+    ${SOURCES_DIRECTORY}/RepentePd/Integration/*.cpp
 )
 
 
@@ -264,6 +274,7 @@ if(ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/Tests/Tests.h
     ${CMAKE_CURRENT_SOURCE_DIR}/Tests/HelpfileFuzzTest.h
     ${CMAKE_CURRENT_SOURCE_DIR}/Tests/ObjectFuzzTest.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Tests/RepentePdTests.h
     )
 
 endif()

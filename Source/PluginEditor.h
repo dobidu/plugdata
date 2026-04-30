@@ -22,6 +22,7 @@
 
 #include "Utility/ObjectThemeManager.h"
 #include "NVGSurface.h"
+#include "RepentePd/UI/PromptBar.h"
 
 class ConnectionMessageDisplay;
 class Sidebar;
@@ -209,6 +210,8 @@ private:
     std::unique_ptr<NVGGraphicsContext> nvgCtx;
 
     OSUtils::KeyboardLayout keyboardLayout;
+
+    std::unique_ptr<PromptBar> promptBar;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };
