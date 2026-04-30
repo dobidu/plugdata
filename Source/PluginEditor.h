@@ -23,6 +23,7 @@
 #include "Utility/ObjectThemeManager.h"
 #include "NVGSurface.h"
 #include "RepentePd/UI/PromptBar.h"
+#include "RepentePd/Core/Executor.h"
 
 class ConnectionMessageDisplay;
 class Sidebar;
@@ -212,6 +213,7 @@ private:
     OSUtils::KeyboardLayout keyboardLayout;
 
     std::unique_ptr<PromptBar> promptBar;
+    std::unique_ptr<RepentePd::Executor> executor;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

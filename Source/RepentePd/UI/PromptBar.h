@@ -17,6 +17,9 @@ public:
 
     juce::TextEditor& getInput() { return input; }
 
+    // Called with trimmed input text when user presses Enter.
+    std::function<void(juce::String const&)> onSubmit;
+
 private:
     juce::TextEditor input;
 

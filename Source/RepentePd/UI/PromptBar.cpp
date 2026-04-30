@@ -12,6 +12,13 @@ PromptBar::PromptBar()
     input.setScrollbarsShown(false);
     input.setPopupMenuEnabled(false);
     addAndMakeVisible(input);
+
+    input.onReturnKey = [this] {
+        juce::String text = input.getText().trim();
+        input.clear();
+        if (onSubmit && text.isNotEmpty())
+            onSubmit(text);
+    };
 }
 
 void PromptBar::paint(juce::Graphics& g)
