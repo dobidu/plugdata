@@ -22,7 +22,9 @@ CommandResult CommandParser::parse(juce::String const& input)
         juce::String remainder = trimmed.substring(4).trim();
         juce::StringArray tokens = juce::StringArray::fromTokens(remainder, " ", "\"");
         tokens.removeEmptyStrings();
-        return parsePds(tokens);
+        auto r = parsePds(tokens);
+        r.raw = trimmed;
+        return r;
     }
 
     if (trimmed.equalsIgnoreCase("/help"))
