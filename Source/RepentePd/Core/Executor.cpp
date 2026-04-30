@@ -70,8 +70,9 @@ void Executor::execute(CommandResult const& cmd,
         return;
     }
 
-    DBG("Executor::execute " + commandTypeName(cmd.type)
-        + (cmd.args.isEmpty() ? "" : " " + cmd.args.joinIntoString(" ")));
+    fprintf(stderr, "Executor::execute %s%s\n",
+            commandTypeName(cmd.type).toRawUTF8(),
+            cmd.args.isEmpty() ? "" : (" " + cmd.args.joinIntoString(" ")).toRawUTF8());
 
     // DirectCommand dispatch implemented in Phase 02-02.
     if (onResult) onResult("not implemented: " + cmd.raw);

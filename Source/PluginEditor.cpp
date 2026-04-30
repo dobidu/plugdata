@@ -273,11 +273,12 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     promptBar->setAlwaysOnTop(true);
     addAndMakeVisible(promptBar.get());
 
-    executor = std::make_unique<RepentePd::Executor>(getCurrentCanvas());
+    executor = std::make_unique<RepentePd::Executor>(nullptr);
     promptBar->onSubmit = [this](juce::String const& text) {
+        executor->setCanvas(getCurrentCanvas()); // refresh — canvas may have opened after init
         auto result = RepentePd::CommandParser::parse(text);
         executor->submit(result, [](juce::String const& msg) {
-            DBG("RepentePd: " + msg);
+            fprintf(stderr, "RepentePd: %s\n", msg.toRawUTF8()); // DBG unreliable on macOS terminal
         });
     };
 
