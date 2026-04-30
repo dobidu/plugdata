@@ -3,7 +3,7 @@
 ## Milestone 1: MVP (Phases 1–3)
 Foundation → pd-script REPL → Repente Bridge. Demo-ready at Phase 3 end.
 
-### Phase 01: Foundation (1-2w)
+### Phase 01: Foundation ✓ COMPLETE (2026-04-30)
 Fork plugdata, CI matrix (Win/Mac/Linux), PromptBar render-only, baseline JUCE UnitTests.
 AC: builds on 3 OSes, PromptBar visible, ctest passes.
 
