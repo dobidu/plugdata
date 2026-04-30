@@ -270,6 +270,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     touchSelectionHelper->setAlwaysOnTop(true);
 
     promptBar = std::make_unique<PromptBar>();
+    promptBar->setAlwaysOnTop(true);
     addAndMakeVisible(promptBar.get());
 
     statusbar->setAlwaysOnTop(true);
@@ -575,7 +576,8 @@ void PluginEditor::resized()
     nvgSurface.setRoundedBottomCorners(true, welcomePanel->isVisible() || sidebar->isHidden());
 #endif
 
-    auto const workAreaHeight = getHeight() - toolbarHeight;
+    auto const promptBarHeight = 36;
+    auto const workAreaHeight = getHeight() - toolbarHeight - promptBarHeight;
     auto const sidebarWidth = (sidebar->isVisible() && !sidebar->isHidden()) ? sidebar->getWidth() : 0;
     workArea = Rectangle<int>(0, toolbarHeight, getWidth() - sidebarWidth, workAreaHeight);
 
@@ -605,7 +607,7 @@ void PluginEditor::resized()
     redoButton.setBounds(2 * buttonDistance + offset, 0, buttonSize, buttonSize);
     addObjectMenuButton.setBounds(3 * buttonDistance + offset, 0, buttonSize, buttonSize);
 
-    promptBar->setBounds(0, getHeight() - 92, getWidth(), 36);
+    promptBar->setBounds(0, toolbarHeight + workAreaHeight, getWidth(), promptBarHeight);
 
     auto statusbarBounds = getLocalBounds().removeFromBottom(46).translated(0, -10);
     if (SettingsFile::getInstance()->isUsingTouchMode()) {
