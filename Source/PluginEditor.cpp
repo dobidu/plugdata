@@ -609,7 +609,7 @@ void PluginEditor::resized()
 
     promptBar->setBounds(0, toolbarHeight + workAreaHeight, getWidth(), promptBarHeight);
 
-    auto statusbarBounds = getLocalBounds().removeFromBottom(46).translated(0, -10);
+    auto statusbarBounds = getLocalBounds().withTrimmedBottom(promptBarHeight).removeFromBottom(46).translated(0, -10);
     if (SettingsFile::getInstance()->isUsingTouchMode()) {
         touchSelectionHelper->setBounds(statusbarBounds.withSizeKeepingCentre(192, 46));
         statusbar->setBounds(statusbarBounds.removeFromLeft(208).translated(4, 0));
