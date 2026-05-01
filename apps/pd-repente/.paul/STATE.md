@@ -3,36 +3,49 @@
 ## Loop Position
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ·        ·     [APPLY in progress — awaiting human-verify]
+  ✓        ✓        ✓     [Loop complete — Phase 02 closed, ready for Phase 02-04]
 ```
 
 ## Active Milestone
 Milestone 1: MVP
 
 ## Active Phase
-02-pd-script-repl (Plan 3 of 3 active)
+02-pd-script-repl (Plan 4 of 4 — not started)
 
 ## Active Plan
-02-03-PLAN.md — /help+/clear + ObjectTreePanel + Executor ObjectEntry + removeCanvas
+None — ready to /paul:plan 02-pd-script-repl/02-04
 
 ## Last Action
-02-03 code committed c55385d1d — awaiting human verify
+02-03 UNIFY complete — Phase 02 plans 01–03 closed
 
 ## Next Action
-Human verify on Mac M4, then /paul:unify 02-pd-script-repl/02-03
+/paul:plan 02-pd-script-repl/02-04 — Lua+pds bindings + /help <topic>
 
 ## Progress
 - Milestone 1 (MVP): 1/3 phases complete (~33%)
-- Phase 02: 80% — Plans 01, 02 complete; Plan 03 in APPLY
+- Phase 02: 75% — Plans 01, 02, 03 complete; Plan 04 not started
 
 ## Session Continuity
-Stopped at: 02-03 PLAN written
-Resume file: .paul/phases/02-pd-script-repl/02-03-PLAN.md
-Next: /paul:apply 02-pd-script-repl/02-03 — OutputArea + ObjectTreePanel + /help + /clear
+Stopped at: Phase 02 plan 03 UNIFY complete
+Resume file: .paul/phases/02-pd-script-repl/02-03-SUMMARY.md
+Next: /paul:plan 02-pd-script-repl/02-04
 
 ## Open Items
 - ffmpeg `build_ffmpeg.sh` 10.9→10.13 patch: must commit to pd-else submodule for macOS CI
 - PromptInput expand-on-focus overlaps canvas slightly (36px fixed height) — deferred to 02-04 or later
 - `canvasStates` stale entries on context-menu tab close (TabComponent internal calls) — partial, benign
-- 02-04 planned: Executor::executeSync() + PdsLuaBindings (pds.create/connect/etc. in Lua) + /help <topic>
-- Phase 04 planned: ObjectTreePanel extended to scan ALL canvas objects (GUI-added + sub-objects)
+- 02-04: Executor::executeSync() + PdsLuaBindings (pds.create/connect/etc. in Lua) + /help <topic>
+- Phase 04: ObjectTreePanel extended to scan ALL canvas objects (GUI-added + sub-objects)
+
+## Accumulated Context
+
+### Decisions
+- No OutputArea — console tab is the single output channel (02-03)
+- ObjectEntry stores ptr+text; classify() lives in ObjectTreePanel (02-03)
+- handleAsyncUpdate is the tab-switch hook for panel refresh (02-03)
+- SugarExpander as pre-processor before CommandParser (02-02)
+- Executor per-canvas CanvasState map for registry isolation (02-02)
+
+### Git State
+Last commit: 9524b4042
+Branch: pd-repente-main

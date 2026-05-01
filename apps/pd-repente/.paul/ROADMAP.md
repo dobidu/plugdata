@@ -7,7 +7,7 @@ Foundation → pd-script REPL → Repente Bridge. Demo-ready at Phase 3 end.
 Fork plugdata, CI matrix (Win/Mac/Linux), PromptBar render-only, baseline JUCE UnitTests.
 AC: builds on 3 OSes, PromptBar visible, ctest passes.
 
-### Phase 02: pd-script REPL (2-3w)
+### Phase 02: pd-script REPL (in progress — 3/4 plans complete)
 Plans: 01 ✓ REPL engine | 02 ✓ DirectCommands + SugarExpander + PromptInput | 03 ✓ ObjectTreePanel + /help + /clear | 04 Lua+pds bindings + /help topics
 
 CommandParser + sugar pre-processor, DirectCommands (create/connect/delete/list/move),
