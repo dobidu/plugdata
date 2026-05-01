@@ -276,7 +276,8 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
     executor = std::make_unique<RepentePd::Executor>(nullptr);
     promptBar->onSubmit = [this](juce::String const& text) {
-        executor->setCanvas(getCurrentCanvas()); // refresh — canvas may have opened after init
+        if (!executor->getCanvas())
+            executor->setCanvas(getCurrentCanvas()); // one-time init — handleAsyncUpdate keeps it current
 
         bool const isArrow = RepentePd::SugarExpander::isArrow(text);
         juce::String const preArrowLast = executor->getLastCreatedName();
@@ -994,6 +995,9 @@ void PluginEditor::modifierKeysChanged(ModifierKeys const& modifiers)
 void PluginEditor::handleAsyncUpdate()
 {
     tabComponent.repaint(); // So tab dirty titles can be reflected
+
+    if (executor)
+        executor->setCanvas(getCurrentCanvas());
 
     if (auto const* cnv = getCurrentCanvas()) {
         bool locked = getValue<bool>(cnv->locked);

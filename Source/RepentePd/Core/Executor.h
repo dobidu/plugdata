@@ -30,6 +30,9 @@ public:
     // Returns auto-assigned name of last created object, or "" if none.
     [[nodiscard]] juce::String getLastCreatedName() const;
 
+    // Returns current canvas (message thread only).
+    [[nodiscard]] Canvas* getCanvas() const { return canvas; }
+
 private:
     // Runs exclusively on message thread.
     void execute(CommandResult const& cmd,

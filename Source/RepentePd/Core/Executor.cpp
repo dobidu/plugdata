@@ -36,6 +36,8 @@ void Executor::setCanvas(Canvas* newCanvas)
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     if (canvas != newCanvas) {
+        fprintf(stderr, "Executor::setCanvas canvas changed %p → %p (registry cleared)\n",
+                static_cast<void*>(canvas), static_cast<void*>(newCanvas));
         registry.clear();
         nextId = 1;
     }
