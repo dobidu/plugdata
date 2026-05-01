@@ -8,9 +8,17 @@ Fork plugdata, CI matrix (Win/Mac/Linux), PromptBar render-only, baseline JUCE U
 AC: builds on 3 OSes, PromptBar visible, ctest passes.
 
 ### Phase 02: pd-script REPL (2-3w)
-CommandParser + sugar pre-processor, DirectCommands (create/connect/delete/list/move/lua),
-Executor (pd::Patch wrapper, thread-safe), autocomplete, history, /help, /clear.
-AC: /pds create osc~ → object on canvas; audio thread unblocked.
+Plans: 01 ✓ REPL engine | 02 ✓ DirectCommands + SugarExpander + PromptInput | 03 ✓ ObjectTreePanel + /help + /clear | 04 Lua+pds bindings + /help topics
+
+CommandParser + sugar pre-processor, DirectCommands (create/connect/delete/list/move),
+Executor (pd::Patch wrapper, thread-safe, per-canvas registry), history, /help <topic>, /clear.
+ObjectTreePanel (compact sidebar panel, objects grouped DSP/control/UI, REPL-named objects only).
+Lua+pds API: pds.create/connect/delete/move/list callable from Lua blocks — synchronous,
+message-thread-safe; enables loops and generative patch scripting.
+/help <topic>: pds | sugar | lua | pds-lua | llm | commands.
+AC: /pds create osc~ → object on canvas; audio thread unblocked;
+    console shows result; object tree reflects live registry;
+    Lua loop creates N objects via pds.create().
 
 ### Phase 03: Repente Bridge (3-4w)
 RepenteClient (cpp-httplib, SSE), PdParser (truncation-tolerant), Bridge→Executor,
@@ -22,7 +30,9 @@ AC: text prompt → valid patch ~5s; Battery B 5/5; server-offline handled.
 ### Phase 04: Bidirectionality + Analysis (2-3w)
 Canvas serializer (subgraph default/full optional), context injection, Analysis mode,
 session persistence (~/.repente-pd/), /canvas, /sessions.
-AC: context-aware generation; Battery F completes.
+ObjectTreePanel extended: scan ALL canvas objects (REPL-named + GUI-added + sub-patch objects);
+unnamed objects shown read-only as [type]; composed objects/abstractions expandable one level.
+AC: context-aware generation; Battery F completes; object tree shows full patch state.
 
 ### Phase 05: Tier 2 + V1.0 Polish (2w)
 Ollama auto-detect (localhost:11434), first-launch wizard, privacy warning,

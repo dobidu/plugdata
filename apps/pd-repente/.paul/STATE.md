@@ -3,7 +3,7 @@
 ## Loop Position
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ·        ·     [PLAN written — awaiting APPLY]
+  ✓        ·        ·     [APPLY in progress — awaiting human-verify]
 ```
 
 ## Active Milestone
@@ -13,13 +13,13 @@ Milestone 1: MVP
 02-pd-script-repl (Plan 3 of 3 active)
 
 ## Active Plan
-02-03-PLAN.md — OutputArea + ObjectTreePanel + /help + /clear
+02-03-PLAN.md — /help+/clear + ObjectTreePanel + Executor ObjectEntry + removeCanvas
 
 ## Last Action
-02-03-PLAN.md created 2026-05-01
+02-03 code committed c55385d1d — awaiting human verify
 
 ## Next Action
-/paul:apply 02-pd-script-repl/02-03
+Human verify on Mac M4, then /paul:unify 02-pd-script-repl/02-03
 
 ## Progress
 - Milestone 1 (MVP): 1/3 phases complete (~33%)
@@ -32,5 +32,7 @@ Next: /paul:apply 02-pd-script-repl/02-03 — OutputArea + ObjectTreePanel + /he
 
 ## Open Items
 - ffmpeg `build_ffmpeg.sh` 10.9→10.13 patch: must commit to pd-else submodule for macOS CI
-- PromptInput expand-on-focus overlaps canvas slightly (36px fixed height) — fix layout in 02-03 or 02-04
-- `canvasStates` map accumulates stale Canvas* keys on tab close — clean up in future plan
+- PromptInput expand-on-focus overlaps canvas slightly (36px fixed height) — deferred to 02-04 or later
+- `canvasStates` stale entries on context-menu tab close (TabComponent internal calls) — partial, benign
+- 02-04 planned: Executor::executeSync() + PdsLuaBindings (pds.create/connect/etc. in Lua) + /help <topic>
+- Phase 04 planned: ObjectTreePanel extended to scan ALL canvas objects (GUI-added + sub-objects)
