@@ -37,6 +37,7 @@
 #include "PluginMode.h"
 #include "Components/TouchSelectionHelper.h"
 #include "NVGSurface.h"
+#include "RepentePd/Commands/SugarExpander.h"
 
 #if ENABLE_TESTING
 void runTests(PluginEditor* editor);
@@ -276,9 +277,24 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     executor = std::make_unique<RepentePd::Executor>(nullptr);
     promptBar->onSubmit = [this](juce::String const& text) {
         executor->setCanvas(getCurrentCanvas()); // refresh — canvas may have opened after init
-        auto result = RepentePd::CommandParser::parse(text);
-        executor->submit(result, [](juce::String const& msg) {
-            fprintf(stderr, "RepentePd: %s\n", msg.toRawUTF8()); // DBG unreliable on macOS terminal
+
+        bool const isArrow = RepentePd::SugarExpander::isArrow(text);
+        juce::String const preArrowLast = executor->getLastCreatedName();
+        juce::String const expanded = RepentePd::SugarExpander::expand(text, preArrowLast);
+
+        auto result = RepentePd::CommandParser::parse(expanded);
+        executor->submit(result, [this, isArrow, preArrowLast](juce::String const& msg) {
+            fprintf(stderr, "RepentePd: %s\n", msg.toRawUTF8());
+            if (isArrow && !preArrowLast.isEmpty()) {
+                juce::String const newName = executor->getLastCreatedName();
+                if (newName.isNotEmpty() && newName != preArrowLast) {
+                    auto connectCmd = RepentePd::CommandParser::parse(
+                        "/pds connect " + preArrowLast + " " + newName + " 0 0");
+                    executor->submit(connectCmd, [](juce::String const& m) {
+                        fprintf(stderr, "RepentePd: %s\n", m.toRawUTF8());
+                    });
+                }
+            }
         });
     };
 
