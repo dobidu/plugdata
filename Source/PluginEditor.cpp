@@ -38,6 +38,7 @@
 #include "Components/TouchSelectionHelper.h"
 #include "NVGSurface.h"
 #include "RepentePd/UI/PromptInput.h"
+#include "RepentePd/UI/ObjectTreePanel.h"
 
 #if ENABLE_TESTING
 void runTests(PluginEditor* editor);
@@ -274,6 +275,11 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     promptInput = std::make_unique<RepentePd::PromptInput>(this, executor.get());
     promptInput->setAlwaysOnTop(true);
     addAndMakeVisible(promptInput.get());
+
+    promptInput->onRegistryChanged = [this]() {
+        if (auto* panel = sidebar->getObjectsPanel())
+            panel->refresh(*executor);
+    };
 
     statusbar->setAlwaysOnTop(true);
     addAndMakeVisible(statusbar.get());
@@ -914,6 +920,11 @@ void PluginEditor::updateConsole(SmallString const& message, bool messageIsWarni
         consoleMessageDisplay->showMessage(message, messageIsWarning);
 }
 
+void PluginEditor::clearConsole()
+{
+    sidebar->clearConsole();
+}
+
 TabComponent& PluginEditor::getTabComponent()
 {
     return tabComponent;
@@ -1547,12 +1558,15 @@ bool PluginEditor::perform(InvocationInfo const& info)
                             if (!cnv)
                                 return;
                             if (result == 2)
-                                cnv->save([this, cnv]() mutable { tabComponent.closeTab(cnv); });
-                            else if (result == 1)
+                                cnv->save([this, cnv]() mutable { if (cnv) executor->removeCanvas(cnv); tabComponent.closeTab(cnv); });
+                            else if (result == 1) {
+                                executor->removeCanvas(cnv);
                                 tabComponent.closeTab(cnv);
+                            }
                         },
                         0, true);
                 } else {
+                    executor->removeCanvas(cnv);
                     tabComponent.closeTab(cnv);
                 }
             });

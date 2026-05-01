@@ -19,12 +19,16 @@ public:
 
     SmallArray<std::pair<int, String>> executeCommand(pd::Instance* pd, String message) override;
 
+    // Called after every async REPL callback. PluginEditor sets this to refresh ObjectTreePanel.
+    std::function<void()> onRegistryChanged;
+
 protected:
     StringArray const& getHelperCommands() const override { return pdsHelperCommands; }
     StringArray const& getObjectHelperCommands() const override { return pdsHelperCommands; }
 
 private:
-    Executor* executor;
+    PluginEditor* pluginEditor;
+    Executor*     executor;
 
     static inline StringArray const pdsHelperCommands = {
         "/pds create", "/pds connect", "/pds delete", "/pds list", "/pds move"

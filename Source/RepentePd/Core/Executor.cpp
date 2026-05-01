@@ -38,7 +38,7 @@ void Executor::setCanvas(Canvas* newCanvas)
     if (canvas == newCanvas) return;
 
     if (canvas != nullptr)
-        canvasStates[canvas] = { registry, nextId };
+        canvasStates[canvas] = { registry, nextId }; // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
 
     canvas = newCanvas;
 
@@ -115,7 +115,7 @@ void Executor::execute(CommandResult const& cmd,
                 if (onResult) onResult("error: failed to create " + objText);
                 return;
             }
-            juce::String name = assignName(obj);
+            juce::String name = assignName(obj, objText);
             canvas->synchronise();
             if (onResult) onResult("created " + name);
             break;
@@ -168,7 +168,7 @@ void Executor::execute(CommandResult const& cmd,
                 return;
             }
             canvas->patch.removeObjects({ reinterpret_cast<t_gobj*>(ptr) });
-            registry.erase(cmd.args[0]);
+            registry.erase(cmd.args[0]); // NOLINT
             canvas->synchronise();
             if (onResult) onResult("deleted " + cmd.args[0]);
             break;
@@ -209,8 +209,8 @@ void Executor::execute(CommandResult const& cmd,
                 return;
             }
             juce::StringArray lines;
-            for (auto const& [name, _] : registry)
-                lines.add("  " + name);
+            for (auto const& [name, entry] : registry)
+                lines.add("  " + name + "  [" + entry.text + "]");
             if (onResult) onResult(lines.joinIntoString("\n"));
             break;
         }
@@ -234,17 +234,28 @@ void Executor::execute(CommandResult const& cmd,
     }
 }
 
-juce::String Executor::assignName(void* obj)
+juce::String Executor::assignName(void* ptr, juce::String const& text)
 {
     juce::String name = "obj_" + juce::String(nextId++);
-    registry[name] = obj;
+    registry[name] = { ptr, text };
     return name;
 }
 
 void* Executor::resolve(juce::String const& name) const
 {
     auto it = registry.find(name);
-    return it != registry.end() ? it->second : nullptr; // NOLINT
+    return it != registry.end() ? it->second.ptr : nullptr;
+}
+
+void Executor::removeCanvas(Canvas* c)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    canvasStates.erase(c);
+    if (canvas == c) {
+        canvas  = nullptr;
+        registry.clear();
+        nextId  = 1;
+    }
 }
 
 } // namespace RepentePd

@@ -10,8 +10,9 @@
 
 namespace RepentePd {
 
-PromptInput::PromptInput(PluginEditor* editor, Executor* ex)
-    : CommandInput(editor)
+PromptInput::PromptInput(PluginEditor* ed, Executor* ex)
+    : CommandInput(ed)
+    , pluginEditor(ed)
     , executor(ex)
 {
 }
@@ -22,20 +23,43 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
     if (msg.isEmpty())
         return {};
 
+    // /help and /clear handled before routing so they always work
+    if (msg == "/help") {
+        pdInstance->logMessage(
+            "/pds create <obj> [x y]     add object to canvas\n"
+            "/pds connect <a> <b> [n n]  connect outlets\n"
+            "/pds delete <name>          remove object\n"
+            "/pds move <name> <x> <y>   reposition object\n"
+            "/pds list                   show all objects\n"
+            "-> <obj> [x y]             create + connect from last\n"
+            "$last                       expand to last created name\n"
+            "/lua <expr>                run Lua expression\n"
+            "/help                       this help\n"
+            "/clear                      clear console\n"
+            "<free text>                send to Repente LLM (Phase 03)");
+        return {};
+    }
+    if (msg == "/clear") {
+        pluginEditor->clearConsole();
+        return {};
+    }
+
     // Arrow sugar: → or -> → /pds create + auto-connect
     if (SugarExpander::isArrow(msg)) {
         juce::String const preArrowLast = executor->getLastCreatedName();
         auto const expanded            = SugarExpander::expand(msg, preArrowLast);
         auto cmd                       = CommandParser::parse(expanded);
-        executor->submit(cmd, [ex = executor, preArrowLast, pd = pdInstance](juce::String const& result) {
+        executor->submit(cmd, [this, ex = executor, preArrowLast, pd = pdInstance](juce::String const& result) {
             pd->logMessage(result);
+            if (onRegistryChanged) onRegistryChanged();
             if (preArrowLast.isNotEmpty()) {
                 juce::String const newName = ex->getLastCreatedName();
                 if (newName.isNotEmpty() && newName != preArrowLast) {
                     auto connectCmd = CommandParser::parse(
                         "/pds connect " + preArrowLast + " " + newName + " 0 0");
-                    ex->submit(connectCmd, [pd](juce::String const& m) {
+                    ex->submit(connectCmd, [this, pd](juce::String const& m) {
                         pd->logMessage(m);
+                        if (onRegistryChanged) onRegistryChanged();
                     });
                 }
             }
@@ -48,8 +72,9 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
         juce::String const lastName = executor->getLastCreatedName();
         auto const expanded         = SugarExpander::expand(msg, lastName);
         auto cmd                    = CommandParser::parse(expanded);
-        executor->submit(cmd, [pd = pdInstance](juce::String const& result) {
+        executor->submit(cmd, [this, pd = pdInstance](juce::String const& result) {
             pd->logMessage(result);
+            if (onRegistryChanged) onRegistryChanged();
         });
         return {};
     }

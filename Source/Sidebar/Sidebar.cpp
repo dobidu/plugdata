@@ -23,6 +23,7 @@
 #include "AutomationPanel.h"
 #include "SearchPanel.h"
 #include "Palettes.h"
+#include "RepentePd/UI/ObjectTreePanel.h"
 
 Sidebar::Sidebar(PluginProcessor* instance, PluginEditor* parent)
     : pd(instance)
@@ -33,12 +34,14 @@ Sidebar::Sidebar(PluginProcessor* instance, PluginEditor* parent)
     automationPanel = std::make_unique<AutomationPanel>(pd);
     searchPanel = std::make_unique<SearchPanel>(parent);
     palettePanel = std::make_unique<Palettes>(parent);
+    objectsPanel = std::make_unique<RepentePd::ObjectTreePanel>();
     inspector = std::make_unique<Inspector>();
     addAndMakeVisible(consolePanel.get());
     addChildComponent(browserPanel.get());
     addChildComponent(automationPanel.get());
     addChildComponent(searchPanel.get());
     addChildComponent(palettePanel.get());
+    addChildComponent(objectsPanel.get());
 
     addChildComponent(inspector.get());
 
@@ -88,6 +91,14 @@ Sidebar::Sidebar(PluginProcessor* instance, PluginEditor* parent)
     };
     addAndMakeVisible(paletteButton);
 
+    objectsButton.setTooltip("Open objects panel");
+    objectsButton.setConnectedEdges(12);
+    objectsButton.setClickingTogglesState(true);
+    objectsButton.onClick = [this] {
+        showPanel(SidePanel::ObjectsPanel);
+    };
+    addAndMakeVisible(objectsButton);
+
     consoleButton.setToggleState(true, dontSendNotification);
 
     addAndMakeVisible(consoleButton);
@@ -102,7 +113,8 @@ Sidebar::Sidebar(PluginProcessor* instance, PluginEditor* parent)
         PanelAndButton { browserPanel.get(), browserButton },
         PanelAndButton { automationPanel.get(), automationButton },
         PanelAndButton { searchPanel.get(), searchButton },
-        PanelAndButton { palettePanel.get(), paletteButton }};
+        PanelAndButton { palettePanel.get(), paletteButton },
+        PanelAndButton { objectsPanel.get(), objectsButton }};
 
     inspector->setVisible(false);
     currentPanel = SidePanel::ConsolePanel;
@@ -175,7 +187,7 @@ void Sidebar::resized()
     buttonBarBounds.translate(-sidebarSelectorOffset, 0);
 
     if (SettingsFile::getInstance()->getProperty<bool>("centre_sidepanel_buttons")) {
-        buttonBarBounds = buttonBarBounds.withSizeKeepingCentre(30, 144 + 30 + 30 + 8 + 30);
+        buttonBarBounds = buttonBarBounds.withSizeKeepingCentre(30, 144 + 30 + 30 + 8 + 30 + 8 + 30);
     } else {
         buttonBarBounds = buttonBarBounds.withTrimmedTop(34);
     }
@@ -189,6 +201,8 @@ void Sidebar::resized()
     searchButton.setBounds(buttonBarBounds.removeFromTop(30));
     buttonBarBounds.removeFromTop(8);
     paletteButton.setBounds(buttonBarBounds.removeFromTop(30));
+    buttonBarBounds.removeFromTop(8);
+    objectsButton.setBounds(buttonBarBounds.removeFromTop(30));
 
     dividerBounds = buttonBarBounds.removeFromTop(20);
 
@@ -235,14 +249,16 @@ void Sidebar::resized()
     searchPanel->setBounds(bounds);
     consolePanel->setBounds(bounds);
     palettePanel->setBounds(bounds);
+    objectsPanel->setBounds(bounds);
 }
 
 bool Sidebar::hitTest(int x, int y)
 {
     Rectangle<int> buttonBounds;
-    for(auto* button : StackArray<Component*, 3>{
+    for(auto* button : StackArray<Component*, 4>{
         &consoleButton,
         &paletteButton,
+        &objectsButton,
         &inspectorButton})
     {
         if(button->isVisible()) buttonBounds = buttonBounds.getUnion(button->getBounds());
@@ -373,6 +389,9 @@ void Sidebar::showPanel(SidePanel const panelToShow)
     case SidePanel::PalettePanel:
         setPanelVis(palettePanel.get(), SidePanel::PalettePanel);
         break;
+    case SidePanel::ObjectsPanel:
+        setPanelVis(objectsPanel.get(), SidePanel::ObjectsPanel);
+        break;
     case SidePanel::InspectorPanel:
         if (!sidebarHidden) {
             auto const isVisible = inspectorButton.isInspectorPinned() || (inspectorButton.isInspectorAuto() && !inspector->isEmpty());
@@ -394,6 +413,11 @@ void Sidebar::showPanel(SidePanel const panelToShow)
 
     resized();
     repaint();
+}
+
+RepentePd::ObjectTreePanel* Sidebar::getObjectsPanel() const
+{
+    return objectsPanel.get();
 }
 
 void Sidebar::clearInspector()
@@ -540,12 +564,13 @@ void Sidebar::renderButtonsOnCanvas(NVGcontext* nvg)
     g.setColour(PlugDataColours::toolbarOutlineColour);
     g.drawRoundedRectangle(b.toFloat(), Corners::largeCornerRadius, 1.0f);
 
-    for(auto* button : StackArray<SidebarSelectorButton*, 5>{
+    for(auto* button : StackArray<SidebarSelectorButton*, 6>{
         &consoleButton,
         &browserButton,
         &automationButton,
         &searchButton,
-        &paletteButton
+        &paletteButton,
+        &objectsButton
     })
     {
         auto pos = editor->nvgSurface.getLocalPoint(button, Point<int>(0, 0));

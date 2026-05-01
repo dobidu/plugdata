@@ -102,6 +102,8 @@ public:
 
     void updateConsole(SmallString const& message, bool isWarning, int numMessages, bool newWarning);
 
+    void clearConsole();
+
     bool isInterestedInFileDrag(StringArray const& files) override;
     void filesDropped(StringArray const& files, int x, int y) override;
     void fileDragEnter(StringArray const&, int, int) override;

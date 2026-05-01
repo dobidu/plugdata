@@ -33,6 +33,16 @@ public:
     // Returns current canvas (message thread only).
     [[nodiscard]] Canvas* getCanvas() const { return canvas; }
 
+    // Call before a canvas is destroyed to remove its state and clear active state if needed.
+    void removeCanvas(Canvas* c);
+
+    struct ObjectEntry {
+        void*        ptr  = nullptr;
+        juce::String text; // pd object text as passed to create, e.g. "osc~"
+    };
+
+    [[nodiscard]] std::map<juce::String, ObjectEntry> const& getRegistry() const { return registry; }
+
 private:
     // Runs exclusively on message thread.
     void execute(CommandResult const& cmd,
@@ -42,14 +52,14 @@ private:
 
     // Per-canvas state: registry + nextId saved/restored on tab switches.
     struct CanvasState {
-        std::map<juce::String, void*> registry;
+        std::map<juce::String, ObjectEntry> registry;
         int nextId = 1;
     };
     std::map<Canvas*, CanvasState> canvasStates;
-    std::map<juce::String, void*> registry;
+    std::map<juce::String, ObjectEntry> registry;
     int nextId = 1;
 
-    juce::String  assignName(void* obj);
+    juce::String  assignName(void* ptr, juce::String const& text);
     [[nodiscard]] void* resolve(juce::String const& name) const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Executor)
