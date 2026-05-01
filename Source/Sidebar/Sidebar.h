@@ -19,7 +19,6 @@ class DocumentationBrowser;
 class AutomationPanel;
 class SearchPanel;
 class PluginProcessor;
-class CommandInput;
 class Palettes;
 
 namespace pd {
@@ -330,8 +329,6 @@ private:
     std::unique_ptr<AutomationPanel> automationPanel;
     std::unique_ptr<SearchPanel> searchPanel;
     std::unique_ptr<Palettes> palettePanel;
-
-    std::unique_ptr<CommandInput> commandInput;
 
     std::unique_ptr<Inspector> inspector;
     std::unique_ptr<Component> resetInspectorButton;

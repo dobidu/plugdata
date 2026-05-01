@@ -1029,7 +1029,7 @@ void PluginEditor::updateSelection(Canvas* cnv)
         } else if (objects.size() > 1) {
             name = "(" + String(objects.size()) + " selected)";
         }
-        sidebar->setCommandTarget(name);
+        promptInput->setConsoleTargetName(name);
     }
 }
 
@@ -1053,7 +1053,7 @@ void PluginEditor::setCommandButtonObject(Object const* obj)
     auto name = String("empty");
     if (obj->cnv) {
         name = obj->getType(false);
-     sidebar->setCommandTarget(name);
+        promptInput->setConsoleTargetName(name);
     }
 }
 

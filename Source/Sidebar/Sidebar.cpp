@@ -19,7 +19,6 @@
 #include "Sidebar.h"
 #include "Console.h"
 #include "Inspector.h"
-#include "CommandInput.h"
 #include "DocumentationBrowser.h"
 #include "AutomationPanel.h"
 #include "SearchPanel.h"
@@ -35,8 +34,6 @@ Sidebar::Sidebar(PluginProcessor* instance, PluginEditor* parent)
     searchPanel = std::make_unique<SearchPanel>(parent);
     palettePanel = std::make_unique<Palettes>(parent);
     inspector = std::make_unique<Inspector>();
-    commandInput = std::make_unique<CommandInput>(parent);
-
     addAndMakeVisible(consolePanel.get());
     addChildComponent(browserPanel.get());
     addChildComponent(automationPanel.get());
@@ -111,8 +108,6 @@ Sidebar::Sidebar(PluginProcessor* instance, PluginEditor* parent)
     currentPanel = SidePanel::ConsolePanel;
     updateExtraSettingsButton();
 
-    addAndMakeVisible(commandInput.get());
-
     updater.addAnimator(animator);
     resized();
 }
@@ -150,7 +145,7 @@ void Sidebar::paint(Graphics& g)
 
 int Sidebar::getCommandInputHeight()
 {
-    return commandInput->isVisible() ? commandInput->getHeight() + 16 : 0;
+    return 0;
 }
 
 void Sidebar::paintOverChildren(Graphics& g)
@@ -203,11 +198,6 @@ void Sidebar::resized()
 
     if (extraSettingsButton) {
         extraSettingsButton->setBounds(panelTitleBarBounds);
-    }
-
-    if(commandInput->isVisible())
-    {
-        commandInput->setBounds(getLocalBounds().removeFromBottom(getCommandInputHeight()).reduced(8));
     }
 
     auto const dividerPos = (getHeight() - getCommandInputHeight()) * (1.0f - dividerFactor);
@@ -365,8 +355,6 @@ void Sidebar::showPanel(SidePanel const panelToShow)
         }
     };
 
-    commandInput->setVisible(panelToShow == SidePanel::ConsolePanel || panelToShow == SidePanel::InspectorPanel);
-
     switch (panelToShow) {
     case SidePanel::ConsolePanel:
         setPanelVis(consolePanel.get(), SidePanel::ConsolePanel);
@@ -449,9 +437,8 @@ void Sidebar::updateAutomationParameters()
     }
 }
 
-void Sidebar::setCommandTarget(String const& text)
+void Sidebar::setCommandTarget(String const& /*text*/)
 {
-    commandInput->setConsoleTargetName(text);
 }
 
 void Sidebar::showSidebar(bool const show)
