@@ -983,8 +983,11 @@ void PluginEditor::handleAsyncUpdate()
 {
     tabComponent.repaint(); // So tab dirty titles can be reflected
 
-    if (executor)
+    if (executor) {
         executor->setCanvas(getCurrentCanvas());
+        if (auto* panel = sidebar->getObjectsPanel())
+            panel->refresh(*executor);
+    }
 
     if (auto const* cnv = getCurrentCanvas()) {
         bool locked = getValue<bool>(cnv->locked);
