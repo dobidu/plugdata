@@ -96,6 +96,10 @@ void Executor::execute(CommandResult const& cmd,
             commandTypeName(cmd.type).toRawUTF8(),
             cmd.args.isEmpty() ? "" : (" " + cmd.args.joinIntoString(" ")).toRawUTF8());
 
+    auto ctx = [this]() -> juce::String {
+        return " (" + (canvas ? canvas->patch.getTitle() : juce::String("?")) + ")";
+    };
+
     switch (cmd.type)
     {
         case CommandType::PDS_CREATE:
@@ -117,7 +121,7 @@ void Executor::execute(CommandResult const& cmd,
             }
             juce::String name = assignName(obj, objText);
             canvas->synchronise();
-            if (onResult) onResult("created " + name);
+            if (onResult) onResult("created " + name + ctx());
             break;
         }
 
@@ -150,7 +154,7 @@ void Executor::execute(CommandResult const& cmd,
 
             juce::String outStr = cmd.args.size() > 2 ? cmd.args[2] : "0";
             juce::String inStr  = cmd.args.size() > 3 ? cmd.args[3] : "0";
-            if (onResult) onResult("connected " + cmd.args[0] + ":" + outStr + " → " + cmd.args[1] + ":" + inStr);
+            if (onResult) onResult("connected " + cmd.args[0] + ":" + outStr + " → " + cmd.args[1] + ":" + inStr + ctx());
             break;
         }
 
@@ -170,7 +174,7 @@ void Executor::execute(CommandResult const& cmd,
             canvas->patch.removeObjects({ reinterpret_cast<t_gobj*>(ptr) });
             registry.erase(cmd.args[0]); // NOLINT
             canvas->synchronise();
-            if (onResult) onResult("deleted " + cmd.args[0]);
+            if (onResult) onResult("deleted " + cmd.args[0] + ctx());
             break;
         }
 
@@ -197,7 +201,7 @@ void Executor::execute(CommandResult const& cmd,
             pd::Interface::getObjectBounds(cnvPtr, reinterpret_cast<t_gobj*>(ptr), &curX, &curY, &curW, &curH);
             canvas->patch.moveObjects({ reinterpret_cast<t_gobj*>(ptr) }, targetX - curX, targetY - curY);
             canvas->synchronise();
-            if (onResult) onResult("moved " + cmd.args[0] + " to (" + juce::String(targetX) + ", " + juce::String(targetY) + ")");
+            if (onResult) onResult("moved " + cmd.args[0] + " to (" + juce::String(targetX) + ", " + juce::String(targetY) + ")" + ctx());
             break;
         }
 
