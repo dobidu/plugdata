@@ -26,6 +26,96 @@
 
 plugdata is a plugin wrapper for Pure Data, featuring a new GUI made with JUCE. This is still a WIP, and there are probably still some bugs. By default, it ships with the ELSE collection of externals and abstractions. The aim is to provide a more comfortable patching experience for a large selection of DAWs. It can also be used as a standalone replacement for pure-data.
 
+---
+
+## pd-repente
+
+> **This fork adds pd-repente** — a scripting REPL and LLM bridge that lets you build Pure Data patches by typing commands or describing what you want to hear.
+
+### What it is
+
+pd-repente embeds a prompt bar directly into the plugdata interface. You can type `pd-script` commands to create, connect, move, and delete objects on the active canvas — or (once the LLM bridge is ready) describe a patch in plain language and have it generated for you.
+
+The project is a local-first composition assistant: the LLM runs as an external HTTP server (compatible with the OpenAI API), so it can be an Ollama model on your machine, a remote Repente server, or any OpenAI-compatible endpoint.
+
+### Current state (Phase 02 — pd-script REPL)
+
+The REPL is functional. The prompt bar is visible at the bottom of every canvas. All commands execute on the audio-message thread safely — the audio thread is never touched.
+
+#### Prompt bar commands
+
+| Command | Action |
+|---|---|
+| `/pds create <type> [x y] [args…]` | Create a pd object on the active canvas |
+| `/pds connect <name1> <out> <name2> <in>` | Connect two named objects |
+| `/pds delete <name>` | Remove a named object |
+| `/pds move <name> <x> <y>` | Move a named object |
+| `/pds list` | List all REPL-created objects in the console |
+| `/help` | Show available commands |
+| `/clear` | Clear the console output |
+
+#### Sugar syntax
+
+Shorter forms expand before execution:
+
+| Sugar | Expands to |
+|---|---|
+| `@type [args…]` | `/pds create type [args…]` |
+| `~type [args…]` | `/pds create type~ [args…]` (DSP shorthand) |
+
+**Examples:**
+
+```
+@osc~ 440          →  /pds create osc~ 440
+~dac               →  /pds create dac~
+@connect obj_1 0 obj_2 0
+```
+
+#### Objects sidebar panel
+
+The sidebar has an **Objects** tab (`:` icon) that shows every REPL-created object on the active canvas, grouped by type:
+
+- **DSP** — objects whose name ends with `~` (signal-rate)
+- **UI** — bng, tgl, hsl, vsl, hradio, vradio, nbx, cnv, vu, floatatom, symbolatom, listbox
+- **Control** — everything else
+
+The panel refreshes automatically after every REPL command.
+
+### Roadmap
+
+| Phase | Status | Description |
+|---|---|---|
+| 01 — Foundation | ✓ Done | CI matrix (Win/Mac/Linux), PromptBar, baseline tests |
+| 02 — pd-script REPL | In progress | REPL engine, DirectCommands, ObjectTreePanel, Lua+pds API |
+| 03 — Repente Bridge | Planned | HTTP/SSE client, natural-language → patch, `/config` panel |
+| 04 — Bidirectionality | Planned | Full canvas scan, context injection, Analysis mode |
+| 05 — V1.0 Polish | Planned | Ollama auto-detect, first-launch wizard, public release |
+
+### Building pd-repente
+
+Same build steps as plugdata (see [Build](#build) below). No extra dependencies for the REPL. The LLM bridge (Phase 03) will add `cpp-httplib` and `nlohmann/json`, both header-only.
+
+```bash
+git clone --recursive https://github.com/BidulaBidu/pd-repente.git
+cd pd-repente
+cmake -S . -B build
+cmake --build build -- -j$(nproc)   # Linux/Mac: nproc / sysctl -n hw.logicalcpu
+```
+
+> **Note:** If you add new `.cpp` files and get linker errors on a machine that already has a build directory, re-run `cmake -S . -B build` to reconfigure before building. CMake uses GLOB for source discovery and the new files won't be picked up otherwise.
+
+### Configuring the LLM server *(Phase 03 — not yet available)*
+
+Once the bridge lands, configuration will live in a `/config` panel inside the sidebar. You will be able to set:
+
+- **Server URL** — any OpenAI-compatible endpoint (default: `http://localhost:11434/v1` for Ollama)
+- **Model name** — detected automatically if the server supports `/models`
+- **Privacy mode** — blocks outbound requests to non-local addresses
+
+Until then, all functionality is purely local (REPL only, no network calls).
+
+---
+
 Join the Discord here, for sharing patches, reporting issues or requesting features: https://discord.gg/eT2RxdF9Nq
 
 <p align="middle">
