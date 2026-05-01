@@ -65,7 +65,7 @@ void ObjectTreePanel::paint(juce::Graphics& g)
     g.fillAll(PlugDataColours::panelBackgroundColour);
 
     auto const font       = juce::Font(juce::FontOptions(12.0f));
-    auto const headerFont = font.boldened();
+    auto const headerFont = juce::Font(juce::FontOptions(12.0f, juce::Font::bold));
     int y = 4;
     constexpr int lineH = 18;
 
