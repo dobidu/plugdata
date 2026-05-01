@@ -40,8 +40,12 @@ private:
 
     Canvas* canvas = nullptr; // access only on message thread
 
-    // Object registry: auto-name → t_gobj* (stored as void* to avoid C headers in header).
-    // Accessed only on message thread.
+    // Per-canvas state: registry + nextId saved/restored on tab switches.
+    struct CanvasState {
+        std::map<juce::String, void*> registry;
+        int nextId = 1;
+    };
+    std::map<Canvas*, CanvasState> canvasStates;
     std::map<juce::String, void*> registry;
     int nextId = 1;
 

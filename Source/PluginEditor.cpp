@@ -37,7 +37,7 @@
 #include "PluginMode.h"
 #include "Components/TouchSelectionHelper.h"
 #include "NVGSurface.h"
-#include "RepentePd/Commands/SugarExpander.h"
+#include "RepentePd/UI/PromptInput.h"
 
 #if ENABLE_TESTING
 void runTests(PluginEditor* editor);
@@ -270,34 +270,10 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     }
     touchSelectionHelper->setAlwaysOnTop(true);
 
-    promptBar = std::make_unique<PromptBar>();
-    promptBar->setAlwaysOnTop(true);
-    addAndMakeVisible(promptBar.get());
-
     executor = std::make_unique<RepentePd::Executor>(nullptr);
-    promptBar->onSubmit = [this](juce::String const& text) {
-        if (!executor->getCanvas())
-            executor->setCanvas(getCurrentCanvas()); // one-time init — handleAsyncUpdate keeps it current
-
-        bool const isArrow = RepentePd::SugarExpander::isArrow(text);
-        juce::String const preArrowLast = executor->getLastCreatedName();
-        juce::String const expanded = RepentePd::SugarExpander::expand(text, preArrowLast);
-
-        auto result = RepentePd::CommandParser::parse(expanded);
-        executor->submit(result, [this, isArrow, preArrowLast](juce::String const& msg) {
-            fprintf(stderr, "RepentePd: %s\n", msg.toRawUTF8());
-            if (isArrow && !preArrowLast.isEmpty()) {
-                juce::String const newName = executor->getLastCreatedName();
-                if (newName.isNotEmpty() && newName != preArrowLast) {
-                    auto connectCmd = RepentePd::CommandParser::parse(
-                        "/pds connect " + preArrowLast + " " + newName + " 0 0");
-                    executor->submit(connectCmd, [](juce::String const& m) {
-                        fprintf(stderr, "RepentePd: %s\n", m.toRawUTF8());
-                    });
-                }
-            }
-        });
-    };
+    promptInput = std::make_unique<RepentePd::PromptInput>(this, executor.get());
+    promptInput->setAlwaysOnTop(true);
+    addAndMakeVisible(promptInput.get());
 
     statusbar->setAlwaysOnTop(true);
     addAndMakeVisible(statusbar.get());
@@ -633,7 +609,7 @@ void PluginEditor::resized()
     redoButton.setBounds(2 * buttonDistance + offset, 0, buttonSize, buttonSize);
     addObjectMenuButton.setBounds(3 * buttonDistance + offset, 0, buttonSize, buttonSize);
 
-    promptBar->setBounds(0, toolbarHeight + workAreaHeight, getWidth(), promptBarHeight);
+    promptInput->setBounds(0, toolbarHeight + workAreaHeight, getWidth(), promptBarHeight);
 
     auto statusbarBounds = getLocalBounds().withTrimmedBottom(promptBarHeight).removeFromBottom(46).translated(0, -10);
     if (SettingsFile::getInstance()->isUsingTouchMode()) {

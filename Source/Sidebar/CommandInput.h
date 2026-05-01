@@ -179,7 +179,7 @@ private:
     CommandProcessor* commandInput = nullptr;
 };
 
-class CommandInput final
+class CommandInput
     : public Component
     , public KeyListener
     , public CommandProcessor
@@ -267,10 +267,13 @@ public:
         Desktop::getInstance().addFocusChangeListener(this);
     }
 
+    virtual StringArray const& getHelperCommands() const { return helperCommands; }
+    virtual StringArray const& getObjectHelperCommands() const { return objectHelperCommands; }
+
     void updateHelperCommands()
     {
         auto isGlobalTarget = consoleTargetName == ">" || consoleTargetName == "lua >";
-        auto& currentHelpers = isGlobalTarget ? helperCommands : objectHelperCommands;
+        auto const& currentHelpers = isGlobalTarget ? getHelperCommands() : getObjectHelperCommands();
 
         helperButtons.clear();
 
@@ -463,7 +466,7 @@ public:
         editor->showCalloutBox(std::move(markupDisplay), getScreenBounds().withSizeKeepingCentre(5, 30));
     }
 
-    SmallArray<std::pair<int, String>> executeCommand(pd::Instance* pd, String message) override
+    virtual SmallArray<std::pair<int, String>> executeCommand(pd::Instance* pd, String message) override
     {
         SmallArray<std::pair<int, String>> result;
 

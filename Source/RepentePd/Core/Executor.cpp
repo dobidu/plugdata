@@ -35,13 +35,30 @@ Executor::Executor(Canvas* c) : canvas(c) {}
 void Executor::setCanvas(Canvas* newCanvas)
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-    if (canvas != newCanvas) {
-        fprintf(stderr, "Executor::setCanvas canvas changed %p → %p (registry cleared)\n",
-                static_cast<void*>(canvas), static_cast<void*>(newCanvas));
+    if (canvas == newCanvas) return;
+
+    if (canvas != nullptr)
+        canvasStates[canvas] = { registry, nextId };
+
+    canvas = newCanvas;
+
+    if (canvas != nullptr) {
+        auto it = canvasStates.find(canvas);
+        if (it != canvasStates.end()) {
+            registry = it->second.registry;
+            nextId   = it->second.nextId;
+            fprintf(stderr, "Executor::setCanvas → %p (restored %zu objects)\n",
+                    static_cast<void*>(canvas), registry.size());
+        } else {
+            registry.clear();
+            nextId = 1;
+            fprintf(stderr, "Executor::setCanvas → %p (new canvas)\n",
+                    static_cast<void*>(canvas));
+        }
+    } else {
         registry.clear();
         nextId = 1;
     }
-    canvas = newCanvas;
 }
 
 void Executor::submit(CommandResult const& cmd,
