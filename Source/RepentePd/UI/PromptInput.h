@@ -8,6 +8,8 @@
 #include "Sidebar/CommandInput.h"
 #include "RepentePd/Core/Executor.h"
 
+struct lua_State;
+
 namespace RepentePd {
 
 // Unified prompt bar: routes /pds to Executor, slash-prefixed commands to
@@ -27,6 +29,14 @@ protected:
     StringArray const& getObjectHelperCommands() const override { return pdsHelperCommands; }
 
 private:
+    void registerPdsTable(lua_State* L);
+
+    static int lua_pds_create (lua_State* L);
+    static int lua_pds_connect(lua_State* L);
+    static int lua_pds_delete (lua_State* L);
+    static int lua_pds_move   (lua_State* L);
+    static int lua_pds_list   (lua_State* L);
+
     PluginEditor* pluginEditor;
     Executor*     executor;
 

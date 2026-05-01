@@ -173,6 +173,11 @@ public:
         commandInput = newCommandInput;
     }
 
+    void registerExtension(std::function<void(lua_State*)> const& fn)
+    {
+        fn(L);
+    }
+
 private:
     lua_State* L; // Lua state
     pd::Instance* pd;
@@ -1005,4 +1010,10 @@ public:
         "messbox",
         "pad",
         "button" };
+
+protected:
+    void registerLuaExtension(std::function<void(lua_State*)> const& fn)
+    {
+        if (lua) lua->registerExtension(fn);
+    }
 };

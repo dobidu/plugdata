@@ -69,6 +69,14 @@ void Executor::submit(CommandResult const& cmd,
     });
 }
 
+juce::String Executor::executeSync(CommandResult const& cmd)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    juce::String result;
+    execute(cmd, [&result](juce::String const& r) { result = r; });
+    return result;
+}
+
 juce::String Executor::getLastCreatedName() const
 {
     if (nextId <= 1) return {};

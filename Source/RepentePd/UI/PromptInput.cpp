@@ -7,14 +7,112 @@
 #include "PromptInput.h"
 #include "RepentePd/Commands/CommandParser.h"
 #include "RepentePd/Commands/SugarExpander.h"
+extern "C" {
+#include <pd-lua/luas/luajit/src/lua.h>
+#include <pd-lua/luas/luajit/src/lauxlib.h>
+}
 
 namespace RepentePd {
+
+// ── Lua C closures for the pds table ─────────────────────────────────────────
+// upvalue 1 = PromptInput*  (lightuserdata)
+// Static members of PromptInput — have access to private fields via self.
+
+int PromptInput::lua_pds_create(lua_State* L)
+{
+    auto* self = static_cast<PromptInput*>(lua_touserdata(L, lua_upvalueindex(1)));
+    juce::String objText = luaL_checkstring(L, 1);
+    int x = (int)luaL_optinteger(L, 2, 100);
+    int y = (int)luaL_optinteger(L, 3, 100);
+    auto cmd = CommandParser::parse(
+        "/pds create " + objText + " " + juce::String(x) + " " + juce::String(y));
+    auto result = self->executor->executeSync(cmd);
+    if (self->pluginEditor && self->pluginEditor->pd)
+        self->pluginEditor->pd->logMessage(result);
+    if (self->onRegistryChanged) self->onRegistryChanged();
+    lua_pushstring(L, self->executor->getLastCreatedName().toRawUTF8());
+    return 1;
+}
+
+int PromptInput::lua_pds_connect(lua_State* L)
+{
+    auto* self = static_cast<PromptInput*>(lua_touserdata(L, lua_upvalueindex(1)));
+    juce::String a  = luaL_checkstring(L, 1);
+    int nout        = (int)luaL_optinteger(L, 2, 0);
+    juce::String b  = luaL_checkstring(L, 3);
+    int nin         = (int)luaL_optinteger(L, 4, 0);
+    auto cmd = CommandParser::parse(
+        "/pds connect " + a + " " + juce::String(nout) + " " + b + " " + juce::String(nin));
+    auto result = self->executor->executeSync(cmd);
+    if (self->pluginEditor && self->pluginEditor->pd)
+        self->pluginEditor->pd->logMessage(result);
+    return 0;
+}
+
+int PromptInput::lua_pds_delete(lua_State* L)
+{
+    auto* self = static_cast<PromptInput*>(lua_touserdata(L, lua_upvalueindex(1)));
+    juce::String name = luaL_checkstring(L, 1);
+    auto cmd = CommandParser::parse("/pds delete " + name);
+    auto result = self->executor->executeSync(cmd);
+    if (self->pluginEditor && self->pluginEditor->pd)
+        self->pluginEditor->pd->logMessage(result);
+    if (self->onRegistryChanged) self->onRegistryChanged();
+    return 0;
+}
+
+int PromptInput::lua_pds_move(lua_State* L)
+{
+    auto* self = static_cast<PromptInput*>(lua_touserdata(L, lua_upvalueindex(1)));
+    juce::String name = luaL_checkstring(L, 1);
+    int x = (int)luaL_checkinteger(L, 2);
+    int y = (int)luaL_checkinteger(L, 3);
+    auto cmd = CommandParser::parse(
+        "/pds move " + name + " " + juce::String(x) + " " + juce::String(y));
+    auto result = self->executor->executeSync(cmd);
+    if (self->pluginEditor && self->pluginEditor->pd)
+        self->pluginEditor->pd->logMessage(result);
+    return 0;
+}
+
+int PromptInput::lua_pds_list(lua_State* L)
+{
+    auto* self = static_cast<PromptInput*>(lua_touserdata(L, lua_upvalueindex(1)));
+    auto cmd = CommandParser::parse("/pds list");
+    auto result = self->executor->executeSync(cmd);
+    if (self->pluginEditor && self->pluginEditor->pd)
+        self->pluginEditor->pd->logMessage(result);
+    return 0;
+}
+
+void PromptInput::registerPdsTable(lua_State* L)
+{
+    lua_newtable(L);
+
+    struct { const char* name; lua_CFunction fn; } fns[] = {
+        { "create",  lua_pds_create  },
+        { "connect", lua_pds_connect },
+        { "delete",  lua_pds_delete  },
+        { "move",    lua_pds_move    },
+        { "list",    lua_pds_list    },
+    };
+    for (auto const& f : fns) {
+        lua_pushlightuserdata(L, this);
+        lua_pushcclosure(L, f.fn, 1);
+        lua_setfield(L, -2, f.name);
+    }
+
+    lua_setglobal(L, "pds");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 PromptInput::PromptInput(PluginEditor* ed, Executor* ex)
     : CommandInput(ed)
     , pluginEditor(ed)
     , executor(ex)
 {
+    registerLuaExtension([this](lua_State* L) { registerPdsTable(L); });
 }
 
 SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdInstance, String msg)
@@ -23,20 +121,59 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
     if (msg.isEmpty())
         return {};
 
-    // /help and /clear handled before routing so they always work
-    if (msg == "/help") {
-        pdInstance->logMessage(
-            "/pds create <obj> [x y]     add object to canvas\n"
-            "/pds connect <a> <b> [n n]  connect outlets\n"
-            "/pds delete <name>          remove object\n"
-            "/pds move <name> <x> <y>   reposition object\n"
-            "/pds list                   show all objects\n"
-            "-> <obj> [x y]             create + connect from last\n"
-            "$last                       expand to last created name\n"
-            "/lua <expr>                run Lua expression\n"
-            "/help                       this help\n"
-            "/clear                      clear console\n"
-            "<free text>                send to Repente LLM (Phase 03)");
+    // /help [topic] and /clear handled before all routing
+    if (msg.startsWith("/help")) {
+        auto topic = msg.substring(5).trim().toLowerCase();
+        if (topic.isEmpty()) {
+            pdInstance->logMessage(
+                "pd-repente REPL — use /help <topic> for details\n"
+                "  topics:  pds  sugar  lua  llm  commands");
+        } else if (topic == "pds") {
+            pdInstance->logMessage(
+                "/pds create <type> [x y] [args]  — create object on canvas\n"
+                "/pds connect <a> <out> <b> <in>  — connect two objects\n"
+                "/pds delete <name>               — remove named object\n"
+                "/pds move <name> <x> <y>         — reposition object\n"
+                "/pds list                        — list all REPL objects");
+        } else if (topic == "sugar") {
+            pdInstance->logMessage(
+                "Sugar syntax — expands before parsing:\n"
+                "  @type [args]   ->  /pds create type [args]\n"
+                "  ~type [args]   ->  /pds create type~ [args]\n"
+                "  -> type [args] ->  create + auto-connect from last object\n"
+                "  $last          ->  expands to last created object name");
+        } else if (topic == "lua") {
+            pdInstance->logMessage(
+                "Lua blocks — wrap expression in { }:\n"
+                "  { math.random() * 440 }\n"
+                "  { pd.post(\"hello\") }\n"
+                "Multi-line: open { and press Enter, close } to run.\n"
+                "\n"
+                "pds table — synchronous pd-script from Lua:\n"
+                "  local n = pds.create(\"osc~\", 100, 100)\n"
+                "  local d = pds.create(\"dac~\", 100, 200)\n"
+                "  pds.connect(n, 0, d, 0)\n"
+                "  pds.delete(n)\n"
+                "  pds.move(n, 200, 100)\n"
+                "  pds.list()\n"
+                "\n"
+                "pd table (built-in):\n"
+                "  pd.post(msg)      — log to console\n"
+                "  pd.eval(command)  — run any REPL command string");
+        } else if (topic == "llm") {
+            pdInstance->logMessage(
+                "LLM bridge — Phase 03 (not yet available)\n"
+                "Free-text input will send prompts to a Repente/OpenAI-compat server.\n"
+                "Configure server URL and model in the /config panel (Phase 03).");
+        } else if (topic == "commands") {
+            pdInstance->logMessage(
+                "Built-in commands:\n"
+                "  /help [topic]  — show help (topics: pds sugar lua llm commands)\n"
+                "  /clear         — clear the console");
+        } else {
+            pdInstance->logMessage("unknown topic: " + topic
+                + "\navailable:  pds  sugar  lua  llm  commands");
+        }
         return {};
     }
     if (msg == "/clear") {

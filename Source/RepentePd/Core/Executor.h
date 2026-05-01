@@ -24,6 +24,10 @@ public:
     void submit(CommandResult const& cmd,
                 std::function<void(juce::String)> const& onResult = {});
 
+    // Synchronous variant — call only from message thread (e.g. Lua callbacks).
+    // Returns result string directly.
+    juce::String executeSync(CommandResult const& cmd);
+
     // Call from message thread when the active canvas/patch changes.
     void setCanvas(Canvas* newCanvas);
 
