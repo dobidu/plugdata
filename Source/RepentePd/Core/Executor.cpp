@@ -35,6 +35,10 @@ Executor::Executor(Canvas* c) : canvas(c) {}
 void Executor::setCanvas(Canvas* newCanvas)
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    if (canvas != newCanvas) {
+        registry.clear();
+        nextId = 1;
+    }
     canvas = newCanvas;
 }
 
@@ -164,11 +168,17 @@ void Executor::execute(CommandResult const& cmd,
                 if (onResult) onResult("error: unknown object: " + cmd.args[0]);
                 return;
             }
-            int x = cmd.args[1].getIntValue();
-            int y = cmd.args[2].getIntValue();
-            canvas->patch.moveObjectTo(reinterpret_cast<t_gobj*>(ptr), x, y);
+            int targetX = cmd.args[1].getIntValue();
+            int targetY = cmd.args[2].getIntValue();
+
+            // moveObjectTo() uses a different coordinate system (JUCE screen coords + magic offset).
+            // Use getObjectBounds + moveObjects delta instead to stay in pd coordinate space.
+            int curX = 0, curY = 0, curW = 0, curH = 0;
+            auto* cnvPtr = canvas->patch.getRawPointer();
+            pd::Interface::getObjectBounds(cnvPtr, reinterpret_cast<t_gobj*>(ptr), &curX, &curY, &curW, &curH);
+            canvas->patch.moveObjects({ reinterpret_cast<t_gobj*>(ptr) }, targetX - curX, targetY - curY);
             canvas->synchronise();
-            if (onResult) onResult("moved " + cmd.args[0] + " to (" + juce::String(x) + ", " + juce::String(y) + ")");
+            if (onResult) onResult("moved " + cmd.args[0] + " to (" + juce::String(targetX) + ", " + juce::String(targetY) + ")");
             break;
         }
 
