@@ -126,53 +126,77 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
         auto topic = msg.substring(5).trim().toLowerCase();
         if (topic.isEmpty()) {
             pdInstance->logMessage(
-                "pd-repente REPL — use /help <topic> for details\n"
-                "  topics:  pds  sugar  lua  llm  commands");
+                "pd-repente REPL -- use /help <topic> for details\n"
+                "  topics: pds  sugar  lua  llm  commands  builtin");
         } else if (topic == "pds") {
             pdInstance->logMessage(
-                "/pds create <type> [x y] [args]  — create object on canvas\n"
-                "/pds connect <a> <out> <b> <in>  — connect two objects\n"
-                "/pds delete <name>               — remove named object\n"
-                "/pds move <name> <x> <y>         — reposition object\n"
-                "/pds list                        — list all REPL objects");
+                "/pds create <type> [x y] [args] -- create object on canvas\n"
+                "/pds connect <a> <out> <b> <in> -- connect two objects\n"
+                "/pds delete <name>              -- remove named object\n"
+                "/pds move <name> <x> <y>        -- reposition object\n"
+                "/pds list                       -- list all REPL objects");
         } else if (topic == "sugar") {
             pdInstance->logMessage(
-                "Sugar syntax — expands before parsing:\n"
-                "  @type [args]   ->  /pds create type [args]\n"
-                "  ~type [args]   ->  /pds create type~ [args]\n"
-                "  -> type [args] ->  create + auto-connect from last object\n"
-                "  $last          ->  expands to last created object name");
+                "Sugar syntax (expands before parsing):\n"
+                "  @type [args]    -> /pds create type [args]\n"
+                "  ~type [args]    -> /pds create type~ [args]\n"
+                "  -> type [args]  -> create + auto-connect from last object\n"
+                "  $last           -> expands to last created object name");
         } else if (topic == "lua") {
             pdInstance->logMessage(
-                "Lua blocks — wrap expression in { }:\n"
+                "Lua blocks -- wrap in { }:\n"
                 "  { math.random() * 440 }\n"
                 "  { pd.post(\"hello\") }\n"
-                "Multi-line: open { and press Enter, close } to run.\n"
+                "Multi-line: open { + Enter, close } to run.\n"
                 "\n"
-                "pds table — synchronous pd-script from Lua:\n"
+                "pds table (synchronous pd-script from Lua):\n"
                 "  local n = pds.create(\"osc~\", 100, 100)\n"
                 "  local d = pds.create(\"dac~\", 100, 200)\n"
                 "  pds.connect(n, 0, d, 0)\n"
                 "  pds.delete(n)\n"
                 "  pds.move(n, 200, 100)\n"
-                "  pds.list()\n"
-                "\n"
+                "  pds.list()");
+            pdInstance->logMessage(
                 "pd table (built-in):\n"
-                "  pd.post(msg)      — log to console\n"
-                "  pd.eval(command)  — run any REPL command string");
+                "  pd.post(msg)     -- log to console\n"
+                "  pd.eval(command) -- run any REPL command string\n"
+                "\n"
+                "Loop example:\n"
+                "  for i=1,4 do pds.create(\"osc~\", i*80, 100) end");
         } else if (topic == "llm") {
             pdInstance->logMessage(
-                "LLM bridge — Phase 03 (not yet available)\n"
+                "LLM bridge -- Phase 03 (not yet available)\n"
                 "Free-text input will send prompts to a Repente/OpenAI-compat server.\n"
-                "Configure server URL and model in the /config panel (Phase 03).");
+                "Configure server URL and model in /config panel (Phase 03).");
         } else if (topic == "commands") {
             pdInstance->logMessage(
-                "Built-in commands:\n"
-                "  /help [topic]  — show help (topics: pds sugar lua llm commands)\n"
-                "  /clear         — clear the console");
+                "pd-repente commands:\n"
+                "  /pds <cmd>     -- pd-script (see /help pds)\n"
+                "  /lua <expr>    -- run Lua expression\n"
+                "  /help [topic]  -- this help\n"
+                "  /clear         -- clear the console\n"
+                "  <free text>    -- send to LLM (Phase 03)\n"
+                "\n"
+                "Shorthand sugar: see /help sugar\n"
+                "Lua + pds API:   see /help lua\n"
+                "Built-in REPL:   see /help builtin");
+        } else if (topic == "builtin") {
+            pdInstance->logMessage(
+                "Built-in REPL commands (plugdata):\n"
+                "  sel <id>       -- select object by name or index\n"
+                "  deselect / >   -- deselect all\n"
+                "  ls / list      -- list all objects on canvas\n"
+                "  find <id>      -- search objects by name\n"
+                "  canvas <msg>   -- send message to canvas\n"
+                "  pd <msg>       -- send message to pd (e.g. pd dsp 1)\n"
+                "  script <file>  -- run Lua script from search path\n"
+                "  reset          -- reset Lua interpreter state\n"
+                "  man <cmd>      -- show manual for command\n"
+                "  { expr }       -- evaluate Lua expression\n"
+                "  <id> > <msg>   -- send message to named object");
         } else {
             pdInstance->logMessage("unknown topic: " + topic
-                + "\navailable:  pds  sugar  lua  llm  commands");
+                + "\navailable: pds  sugar  lua  llm  commands  builtin");
         }
         return {};
     }
