@@ -37,11 +37,12 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 - ✓ ObjectTreePanel: live registry grouped DSP/UI/Control — Phase 02
 - ✓ /help and /clear commands — Phase 02
 - ✓ Stale registry cleanup on tab close (partial) — Phase 02
+- ✓ Lua+pds API: pds.create/connect/delete/move/list callable in Lua — Phase 02
+- ✓ /help <topic>: paged help (pds/sugar/lua/llm/commands/builtin) — Phase 02
+- ✓ ObjectTreePanel syncs on GUI-driven object deletion — Phase 02
 
 ## Active Requirements
 
-- [ ] Lua+pds API: pds.create/connect/delete/move callable in Lua — Phase 02 plan 04
-- [ ] /help <topic>: paged help for pds/lua/llm/commands — Phase 02 plan 04
 - [ ] RepenteClient: HTTP/SSE LLM bridge, natural language → patch — Phase 03
 - [ ] /config panel: server URL, model, privacy mode — Phase 03
 - [ ] Canvas serializer for context injection — Phase 04
@@ -57,6 +58,8 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 | Tab-switch side-effects in handleAsyncUpdate | 02-03 | Single hook for all tab switches alongside setCanvas |
 | SugarExpander as pre-processor, not parser | 02-02 | Clean separation: sugar→canonical text→parse→execute |
 | Executor per-canvas CanvasState map | 02-02 | Isolates registry per tab; save/restore on switch |
+| pds Lua closures as private static members of PromptInput | 02-04 | File-scope statics can't access class-private fields |
+| pruneDeletedObjects hooked into Canvas::performSynchronise | 02-04 | Cheapest hook — covers GUI delete, undo, all pd mutations |
 
 ---
-*Last updated: 2026-05-01 after Phase 02*
+*Last updated: 2026-05-01 after Phase 02 complete*
