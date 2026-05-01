@@ -42,7 +42,7 @@ int PromptInput::lua_pds_connect(lua_State* L)
     juce::String b  = luaL_checkstring(L, 3);
     int nin         = (int)luaL_optinteger(L, 4, 0);
     auto cmd = CommandParser::parse(
-        "/pds connect " + a + " " + juce::String(nout) + " " + b + " " + juce::String(nin));
+        "/pds connect " + a + " " + b + " " + juce::String(nout) + " " + juce::String(nin));
     auto result = self->executor->executeSync(cmd);
     if (self->pluginEditor && self->pluginEditor->pd)
         self->pluginEditor->pd->logMessage(result);

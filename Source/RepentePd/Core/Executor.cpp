@@ -6,6 +6,8 @@
 #include "Utility/Config.h" // brings using namespace juce + JUCE GUI modules (plugdata convention)
 #include "Executor.h"
 #include "Canvas.h" // needed for canvas->patch mutations and canvas->synchronise()
+#include "Object.h"
+#include <unordered_set>
 
 namespace RepentePd {
 
@@ -257,6 +259,19 @@ void* Executor::resolve(juce::String const& name) const
 {
     auto it = registry.find(name);
     return it != registry.end() ? it->second.ptr : nullptr;
+}
+
+void Executor::pruneDeletedObjects()
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    if (canvas == nullptr) return;
+
+    std::unordered_set<void*> live;
+    for (auto* obj : canvas->objects)
+        live.insert(obj->getPointer());
+
+    for (auto it = registry.begin(); it != registry.end(); )
+        it = live.count(it->second.ptr) ? std::next(it) : registry.erase(it);
 }
 
 void Executor::removeCanvas(Canvas* c)

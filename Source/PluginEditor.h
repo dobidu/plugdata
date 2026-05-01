@@ -94,6 +94,7 @@ public:
 
     void updateCommandStatus();
     void handleAsyncUpdate() override;
+    void refreshObjectsPanel();
 
     void updateSelection(Canvas* cnv);
     void setCommandButtonObject(Object const* obj);

@@ -40,6 +40,10 @@ public:
     // Call before a canvas is destroyed to remove its state and clear active state if needed.
     void removeCanvas(Canvas* c);
 
+    // Purge registry entries whose t_gobj* no longer exists on the current canvas.
+    // Call after canvas changes or after GUI-driven object removal.
+    void pruneDeletedObjects();
+
     struct ObjectEntry {
         void*        ptr  = nullptr;
         juce::String text; // pd object text as passed to create, e.g. "osc~"

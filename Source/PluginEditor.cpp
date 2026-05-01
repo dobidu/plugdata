@@ -978,16 +978,23 @@ void PluginEditor::modifierKeysChanged(ModifierKeys const& modifiers)
     setModifierKeys(modifiers);
 }
 
+void PluginEditor::refreshObjectsPanel()
+{
+    if (!executor) return;
+    executor->pruneDeletedObjects();
+    if (auto* panel = sidebar->getObjectsPanel())
+        panel->refresh(*executor);
+}
+
 // Updates command status asynchronously
 void PluginEditor::handleAsyncUpdate()
 {
     tabComponent.repaint(); // So tab dirty titles can be reflected
 
-    if (executor) {
+    if (executor)
         executor->setCanvas(getCurrentCanvas());
-        if (auto* panel = sidebar->getObjectsPanel())
-            panel->refresh(*executor);
-    }
+
+    refreshObjectsPanel();
 
     if (auto const* cnv = getCurrentCanvas()) {
         bool locked = getValue<bool>(cnv->locked);
