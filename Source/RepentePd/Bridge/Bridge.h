@@ -19,10 +19,12 @@ public:
     explicit Bridge(PluginEditor* editor);
     ~Bridge() = default;
 
-    // Fire-and-forget. Logs "repente: thinking..." immediately.
+    // Fire-and-forget. Logs "repente: thinking..." (or "analyzing...") immediately.
     // onDone(success) fires on message thread when complete.
+    // analyzeOnly=true: response logged as plain text, PdParser bypassed.
     // Returns false if client is busy.
     bool send(juce::String const& prompt,
+              bool analyzeOnly = false,
               std::function<void(bool)> onDone = {});
 
     void setConfig(RepenteClient::Config cfg);

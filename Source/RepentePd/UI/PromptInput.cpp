@@ -177,18 +177,22 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  /config key <key>     -- set API key (stored in settings)\n"
                 "  /config test          -- ping server for connectivity\n"
                 "\n"
+                "  /analyze <question>   -- ask LLM about patch (text only, no execution)\n"
+                "  <free text>           -- generate patch (pd/Lua/pds executed on arrival)\n"
+                "\n"
                 "Default URL: http://localhost:7860 (Repente local server)\n"
                 "Settings persist across restarts.");
         } else if (topic == "commands") {
             pdInstance->logMessage(
                 "pd-repente commands:\n"
-                "  /pds <cmd>     -- pd-script (see /help pds)\n"
-                "  /lua <expr>    -- run Lua expression\n"
-                "  /config        -- LLM server config (see /help llm)\n"
-                "  /canvas        -- show serialized canvas state (debug)\n"
-                "  /help [topic]  -- this help\n"
-                "  /clear         -- clear the console\n"
-                "  <free text>    -- send to LLM bridge\n"
+                "  /pds <cmd>       -- pd-script (see /help pds)\n"
+                "  /lua <expr>      -- run Lua expression\n"
+                "  /config          -- LLM server config (see /help llm)\n"
+                "  /analyze <q>     -- ask LLM about patch (text response)\n"
+                "  /canvas          -- show serialized canvas state (debug)\n"
+                "  /help [topic]    -- this help\n"
+                "  /clear           -- clear the console\n"
+                "  <free text>      -- send to LLM bridge\n"
                 "\n"
                 "Shorthand sugar: see /help sugar\n"
                 "Lua + pds API:   see /help lua\n"
@@ -225,6 +229,23 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
         } else {
             pdInstance->logMessage("repente: no active canvas");
         }
+        return {};
+    }
+
+    if (msg.startsWith("/analyze")) {
+        juce::String question = msg.substring(8).trim();
+        if (question.isEmpty()) {
+            pdInstance->logMessage(
+                "usage: /analyze <question>\n"
+                "  Sends question + canvas context to LLM.\n"
+                "  Response shown as text -- no patch execution.");
+            return {};
+        }
+        if (!bridge) {
+            pdInstance->logMessage("repente: bridge not ready -- use /config url to set server");
+            return {};
+        }
+        bridge->send(question, /*analyzeOnly=*/true);
         return {};
     }
 

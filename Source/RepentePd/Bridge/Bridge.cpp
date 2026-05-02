@@ -18,7 +18,7 @@ RepenteClient::Config const& Bridge::getConfig() const { return client.getConfig
 bool Bridge::isBusy() const { return client.isBusy(); }
 void Bridge::ping(std::function<void(bool, juce::String)> callback) { client.ping(std::move(callback)); }
 
-bool Bridge::send(juce::String const& prompt, std::function<void(bool)> onDone)
+bool Bridge::send(juce::String const& prompt, bool analyzeOnly, std::function<void(bool)> onDone)
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
@@ -27,15 +27,22 @@ bool Bridge::send(juce::String const& prompt, std::function<void(bool)> onDone)
         context = CanvasSerializer::serialize(canvas);
 
     if (editor && editor->pd)
-        editor->pd->logMessage("repente: thinking...");
+        editor->pd->logMessage(analyzeOnly ? "repente: analyzing..." : "repente: thinking...");
 
-    return client.send(prompt, context, [this, onDone](juce::String const& response) {
+    return client.send(prompt, context, [this, analyzeOnly, onDone](juce::String const& response) {
         jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
         if (response.startsWith("error:")) {
             if (editor && editor->pd)
                 editor->pd->logMessage(response);
             if (onDone) onDone(false);
+            return;
+        }
+
+        if (analyzeOnly) {
+            if (editor && editor->pd)
+                editor->pd->logMessage(response);
+            if (onDone) onDone(true);
             return;
         }
 
