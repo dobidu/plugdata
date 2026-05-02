@@ -24,7 +24,7 @@ public:
     };
 
     explicit RepenteClient(Config cfg = {});
-    ~RepenteClient() = default;
+    ~RepenteClient() { cancelled->store(true); }
 
     // Fire-and-forget. Callback fires on message thread with response content,
     // or "error: <reason>" on failure. Returns false if client is already busy.
@@ -41,6 +41,7 @@ public:
 private:
     Config config;
     std::atomic<bool> busy { false };
+    std::shared_ptr<std::atomic<bool>> cancelled = std::make_shared<std::atomic<bool>>(false);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RepenteClient)
 };

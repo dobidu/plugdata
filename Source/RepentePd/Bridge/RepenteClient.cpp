@@ -30,10 +30,11 @@ bool RepenteClient::send(juce::String const& prompt,
         return false;
     }
 
-    auto cfg    = config;
-    auto* busy_ = &busy;
+    auto cfg       = config;
+    auto* busy_    = &busy;
+    auto  token    = cancelled;
 
-    std::thread([cfg, prompt = prompt, cb = std::move(callback), busy_]() mutable {
+    std::thread([cfg, prompt = prompt, cb = std::move(callback), busy_, token]() mutable {
         juce::String result;
         try {
             // Parse URL into components
@@ -103,8 +104,10 @@ bool RepenteClient::send(juce::String const& prompt,
         }
 
         busy_->store(false);
-        auto resultCopy = result;
-        juce::MessageManager::callAsync([cb, resultCopy] { cb(resultCopy); });
+        if (!token->load()) {
+            auto resultCopy = result;
+            juce::MessageManager::callAsync([cb, resultCopy] { cb(resultCopy); });
+        }
     }).detach();
 
     return true;
@@ -112,9 +115,10 @@ bool RepenteClient::send(juce::String const& prompt,
 
 void RepenteClient::ping(std::function<void(bool, juce::String)> callback)
 {
-    auto cfg = config;
+    auto cfg   = config;
+    auto token = cancelled;
 
-    std::thread([cfg, cb = std::move(callback)]() mutable {
+    std::thread([cfg, cb = std::move(callback), token]() mutable {
         bool ok = false;
         juce::String msg;
         try {
@@ -167,7 +171,8 @@ void RepenteClient::ping(std::function<void(bool, juce::String)> callback)
         catch (std::exception const& e) { msg = juce::String(e.what()); }
         catch (...)                      { msg = "unknown exception"; }
 
-        juce::MessageManager::callAsync([cb, ok, msg] { cb(ok, msg); });
+        if (!token->load())
+            juce::MessageManager::callAsync([cb, ok, msg] { cb(ok, msg); });
     }).detach();
 }
 

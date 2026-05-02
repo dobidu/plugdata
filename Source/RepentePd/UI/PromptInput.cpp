@@ -234,6 +234,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
         if (args.startsWith("url ")) {
             juce::String newUrl = args.substring(4).trim();
             SettingsFile::getInstance()->setProperty("repente_url", newUrl);
+            SettingsFile::getInstance()->saveSettings();
             if (bridge) {
                 auto cfg = bridge->getConfig();
                 cfg.url = newUrl;
@@ -246,6 +247,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
         if (args.startsWith("model ")) {
             juce::String newModel = args.substring(6).trim();
             SettingsFile::getInstance()->setProperty("repente_model", newModel);
+            SettingsFile::getInstance()->saveSettings();
             if (bridge) {
                 auto cfg = bridge->getConfig();
                 cfg.model = newModel;
@@ -258,6 +260,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
         if (args.startsWith("key ")) {
             juce::String newKey = args.substring(4).trim();
             SettingsFile::getInstance()->setProperty("repente_key", newKey);
+            SettingsFile::getInstance()->saveSettings();
             if (bridge) {
                 auto cfg = bridge->getConfig();
                 cfg.apiKey = newKey;
