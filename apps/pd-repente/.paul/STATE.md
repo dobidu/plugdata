@@ -38,6 +38,7 @@ Resume file: .paul/phases/04-bidirectionality/04-02-PLAN.md
 - canvasStates stale entries on context-menu tab close — benign, will GC on canvas destroy
 - Battery B (5/5 text→canvas→audio tests) — Phase 04+ goal
 - CanvasSerializer doesn't recurse into sub-patches — top-level only for now
+- Phase 05-01: CanvasLayouter — auto-placement (plan 1) + signal-flow layout (plan 2); see ROADMAP
 
 ## Accumulated Context
 

@@ -37,7 +37,18 @@ ObjectTreePanel extended: scan ALL canvas objects (REPL-named + GUI-added + sub-
 unnamed objects shown read-only as [type]; composed objects/abstractions expandable one level.
 AC: context-aware generation; Battery F completes; object tree shows full patch state.
 
-### Phase 05: Tier 2 + V1.0 Polish (2w)
+### Phase 05: Tier 2 + V1.0 Polish (3-4w)
+Plans: 01 · 02 · 03 · 04
+
+**05-01: CanvasLayouter — auto-placement (2 plans)**
+Plan 1 — Grid auto-placement: scan existing object bounding boxes, pack new objects into next
+available ~80px grid cell. Merge mode ignores LLM coordinates; uses CanvasLayouter instead.
+`/pds create osc~` without x/y auto-places. No coordinate arithmetic from user or LLM.
+Plan 2 — Signal-flow layout: topology-aware DAG arrangement (sources top → processors → sinks).
+`/arrange` command reorganizes active canvas. Type classification table (osc~/noise~ = source,
+dac~/throw~ = sink, filter~/reverb~ = processor).
+
+**05-02: V1.0 Polish**
 Ollama auto-detect (localhost:11434), first-launch wizard, privacy warning,
 user docs, smoke tests 3 OSes. V1.0 public release.
 AC: Ollama detects without manual config; privacy warning on remote URL.
