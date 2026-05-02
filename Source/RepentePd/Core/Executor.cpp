@@ -7,6 +7,7 @@
 #include "Executor.h"
 #include "Canvas.h" // needed for canvas->patch mutations and canvas->synchronise()
 #include "Object.h"
+#include "Utility/SettingsFile.h"
 #include <unordered_set>
 
 namespace RepentePd {
@@ -135,14 +136,18 @@ void Executor::execute(CommandResult const& cmd,
             }
             juce::String objText = cmd.args[0];
             bool const hasExplicitCoords = (cmd.args.size() > 2);
+            bool const autoplace = SettingsFile::getInstance()->getProperty<bool>("repente_autoplace");
             int x, y;
             if (hasExplicitCoords) {
                 x = cmd.args[1].getIntValue();
                 y = cmd.args[2].getIntValue();
-            } else {
+            } else if (autoplace) {
                 auto pos = nextAutoPosition();
                 x = pos.x;
                 y = pos.y;
+            } else {
+                x = 100;
+                y = 100;
             }
 
             t_gobj* obj = canvas->patch.createObject(x, y, objText);

@@ -8,6 +8,7 @@
 #include "RepentePd/Commands/CommandParser.h"
 #include "RepentePd/Core/Executor.h"
 #include "PluginEditor.h"
+#include "Utility/SettingsFile.h"
 #include <unordered_map>
 
 namespace RepentePd {
@@ -28,14 +29,19 @@ void PatchMerger::merge(juce::String const& patchContent, PluginEditor* editor)
         auto tokens = juce::StringArray::fromTokens(line, " ", "");
 
         if (tokens.size() >= 5 && tokens[0] == "#X" && tokens[1] == "obj") {
+            int const llmX = tokens[2].getIntValue();
+            int const llmY = tokens[3].getIntValue();
             juce::String type = tokens[4];
             juce::String args;
             for (int i = 5; i < tokens.size(); ++i)
                 args += (i > 5 ? " " : "") + tokens[i];
 
-            // Omit LLM coordinates — Executor auto-placement handles positioning
+            bool const autoplace = SettingsFile::getInstance()->getProperty<bool>("repente_autoplace");
+            // autoplace on: omit coords, Executor cursor handles positioning
+            // autoplace off: pass LLM coords so layout matches the model's intent
             juce::String const cmd = "/pds create " + type
-                + (args.isNotEmpty() ? " " + args : "");
+                + (args.isNotEmpty() ? " " + args : "")
+                + (!autoplace ? " " + juce::String(llmX) + " " + juce::String(llmY) : "");
 
             juce::String const prevName = ex->getLastCreatedName();
             auto const result = ex->executeSync(CommandParser::parse(cmd));

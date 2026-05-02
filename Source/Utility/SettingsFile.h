@@ -188,6 +188,7 @@ private:
         { "repente_merge_mode", var(false) },
         { "repente_persist_history", var(false) },
         { "repente_history", var("") },
+        { "repente_autoplace", var(true) },
     };
 
 public:

@@ -227,12 +227,13 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
         } else if (topic == "llm") {
             pdInstance->logRepente("LLM bridge  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
             pdInstance->logMessage(
-                "  /config url <url>        \xe2\x86\x92 set server (OpenAI-compat)\n"
-                "  /config model <name>     \xe2\x86\x92 set model (gpt-4o, repente-1, \xe2\x80\xa6)\n"
-                "  /config key <key>        \xe2\x86\x92 set API key (stored)\n"
-                "  /config history on|off   \xe2\x86\x92 persist history across sessions\n"
-                "  /config test             \xe2\x86\x92 ping server\n"
-                "  /config                  \xe2\x86\x92 show current settings\n"
+                "  /config url <url>           \xe2\x86\x92 set server (OpenAI-compat)\n"
+                "  /config model <name>        \xe2\x86\x92 set model (gpt-4o, repente-1, \xe2\x80\xa6)\n"
+                "  /config key <key>           \xe2\x86\x92 set API key (stored)\n"
+                "  /config history on|off      \xe2\x86\x92 persist history across sessions\n"
+                "  /config autoplace on|off    \xe2\x86\x92 cursor placement (off = LLM coords)\n"
+                "  /config test                \xe2\x86\x92 ping server\n"
+                "  /config                     \xe2\x86\x92 show current settings\n"
                 "\n"
                 "  /analyze <question>  \xe2\x86\x92 ask LLM, text only, no execution\n"
                 "  /history             \xe2\x86\x92 show conversation turn count\n"
@@ -328,13 +329,15 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             auto const& cfg = bridge ? bridge->getConfig()
                                      : RepentePd::RepenteClient::Config{};
             juce::String masked = cfg.apiKey.isNotEmpty() ? "****" : "(not set)";
-            bool const persist = SettingsFile::getInstance()->getProperty<bool>("repente_persist_history");
+            bool const persist    = SettingsFile::getInstance()->getProperty<bool>("repente_persist_history");
+            bool const autoplace  = SettingsFile::getInstance()->getProperty<bool>("repente_autoplace");
             pdInstance->logRepente("repente config");
             pdInstance->logMessage(
-                "  url:     " + cfg.url + "\n"
-                "  model:   " + cfg.model + "\n"
-                "  key:     " + masked + "\n"
-                "  history: " + juce::String(persist ? "persist" : "session-only (default)"));
+                "  url:       " + cfg.url + "\n"
+                "  model:     " + cfg.model + "\n"
+                "  key:       " + masked + "\n"
+                "  history:   " + juce::String(persist ? "persist" : "session-only (default)") + "\n"
+                "  autoplace: " + juce::String(autoplace ? "on (default)" : "off"));
             return {};
         }
 
@@ -403,14 +406,23 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             return {};
         }
 
+        if (args == "autoplace on" || args == "autoplace off") {
+            bool const on = (args == "autoplace on");
+            SettingsFile::getInstance()->setProperty("repente_autoplace", on);
+            SettingsFile::getInstance()->saveSettings();
+            pdInstance->logRepente(juce::String("repente: autoplace ") + (on ? "on" : "off"));
+            return {};
+        }
+
         pdInstance->logMessage(
             "usage:\n"
-            "  /config                  \xe2\x86\x92 show current config\n"
-            "  /config url <url>        \xe2\x86\x92 set server URL\n"
-            "  /config model <name>     \xe2\x86\x92 set model name\n"
-            "  /config key <key>        \xe2\x86\x92 set API key\n"
-            "  /config history on|off   \xe2\x86\x92 persist history across sessions\n"
-            "  /config test             \xe2\x86\x92 test server connection");
+            "  /config                     \xe2\x86\x92 show current config\n"
+            "  /config url <url>           \xe2\x86\x92 set server URL\n"
+            "  /config model <name>        \xe2\x86\x92 set model name\n"
+            "  /config key <key>           \xe2\x86\x92 set API key\n"
+            "  /config history on|off      \xe2\x86\x92 persist history across sessions\n"
+            "  /config autoplace on|off    \xe2\x86\x92 cursor placement (off = use LLM coords)\n"
+            "  /config test                \xe2\x86\x92 test server connection");
         return {};
     }
 
