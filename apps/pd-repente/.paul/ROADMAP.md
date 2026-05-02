@@ -55,7 +55,14 @@ Plan 2 — Signal-flow arrange: topology-aware DAG (sources top → processors �
 `/arrange` command calls alignObjects + custom sort by connection depth. Type classification table
 (osc~/noise~ = source, dac~/throw~ = sink, filter~/reverb~ = processor). Builds on Plan 1.
 
-**05-02: V1.0 Polish**
+**05-02: Clickable Object Tree**
+ObjectTreePanel becomes interactive: clicking an object row selects it on the canvas
+(Canvas::setSelected / selectObjectWithEdges or equivalent). Keyboard arrow navigation
+through rows optional. Selection syncs both ways: canvas click → tree highlight,
+tree click → canvas select + scroll into view.
+AC: clicking object in tree selects it on canvas; canvas scrolls to show it.
+
+**05-03: V1.0 Polish**
 Ollama auto-detect (localhost:11434), first-launch wizard, privacy warning,
 user docs, smoke tests 3 OSes. V1.0 public release.
 AC: Ollama detects without manual config; privacy warning on remote URL.

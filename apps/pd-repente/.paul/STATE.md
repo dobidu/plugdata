@@ -3,35 +3,35 @@
 ## Loop Position
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ○        ○     [Plan approved — ready for APPLY]
+  ✓        ✓        ✓     [Loop complete — ready for next PLAN]
 ```
 
 ## Active Milestone
 Milestone 2: Full UX
 
 ## Active Phase
-04-bidirectionality (Plan 1 of 3 complete)
+04-bidirectionality (Plan 2 of 3 complete)
 
 ## Active Plan
-04-02 — Analysis mode (/analyze command)
+— (04-02 complete, 04-03 not yet planned)
 
 ## Last Action
-2026-05-02 — 04-02 PLAN created
+2026-05-02 — 04-02 UNIFY complete
 
 ## Next Action
-/paul:apply 04-bidirectionality/04-02
+/paul:plan 04-bidirectionality/04-03
 
 ## Progress
 - Phase 01: 100% ✅
 - Phase 02: 100% ✅
 - Phase 03: 100% ✅
-- Phase 04: 33% — 1/3 plans complete
+- Phase 04: 66% — 2/3 plans complete
 
 ## Session Continuity
 Last session: 2026-05-02
-Stopped at: 04-02 PLAN complete, awaiting APPLY
-Next action: /paul:apply 04-bidirectionality/04-02
-Resume file: .paul/phases/04-bidirectionality/04-02-PLAN.md
+Stopped at: 04-02 UNIFY done
+Next action: /paul:plan 04-bidirectionality/04-03 (session persistence)
+Resume file: .paul/phases/04-bidirectionality/04-02-SUMMARY.md
 
 ## Open Items
 - ffmpeg `build_ffmpeg.sh` 10.9→10.13 patch: must commit to pd-else submodule for macOS CI
@@ -39,6 +39,7 @@ Resume file: .paul/phases/04-bidirectionality/04-02-PLAN.md
 - Battery B (5/5 text→canvas→audio tests) — Phase 04+ goal
 - CanvasSerializer doesn't recurse into sub-patches — top-level only for now
 - Phase 05-01: CanvasLayouter — auto-placement (plan 1) + signal-flow layout (plan 2); see ROADMAP
+- Phase 05-02: Clickable ObjectTreePanel — tree row click selects object on canvas + scroll into view
 
 ## Accumulated Context
 
