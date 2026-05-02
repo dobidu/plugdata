@@ -185,6 +185,7 @@ private:
         { "repente_url", var("http://localhost:7860") },
         { "repente_model", var("repente-1") },
         { "repente_key", var("") },
+        { "repente_merge_mode", var(false) },
     };
 
 public:

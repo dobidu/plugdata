@@ -6,6 +6,7 @@
 #include "Utility/Config.h"
 #include "Bridge.h"
 #include "RepentePd/Bridge/CanvasSerializer.h"
+#include "RepentePd/Bridge/PatchMerger.h"
 #include "RepentePd/UI/PromptInput.h"
 #include "PluginEditor.h"
 
@@ -60,9 +61,14 @@ void Bridge::execute(ParsedResponse const& parsed)
     {
         case ResponseType::PD_PATCH:
         {
-            if (editor->pd) editor->pd->logMessage("repente: opening patch...");
-            editor->getTabComponent().openPatch(parsed.content);
-            editor->refreshObjectsPanel();
+            if (mergeMode) {
+                if (editor->pd) editor->pd->logMessage("repente: merging patch...");
+                PatchMerger::merge(parsed.content, editor);
+            } else {
+                if (editor->pd) editor->pd->logMessage("repente: opening patch...");
+                editor->getTabComponent().openPatch(parsed.content);
+                editor->refreshObjectsPanel();
+            }
             break;
         }
         case ResponseType::LUA_BLOCK:

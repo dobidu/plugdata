@@ -97,6 +97,7 @@ public:
     void handleAsyncUpdate() override;
     void refreshObjectsPanel();
     [[nodiscard]] RepentePd::PromptInput* getPromptInput() const;
+    [[nodiscard]] RepentePd::Executor* getExecutor() const { return executor.get(); }
 
     void updateSelection(Canvas* cnv);
     void setCommandButtonObject(Object const* obj);

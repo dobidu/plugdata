@@ -32,11 +32,17 @@ public:
     [[nodiscard]] bool isBusy() const;
     void ping(std::function<void(bool, juce::String)> callback);
 
+    // When true, PD_PATCH responses are merged into the current canvas instead
+    // of opening a new tab.
+    void setMergeMode(bool merge) { mergeMode = merge; }
+    [[nodiscard]] bool getMergeMode() const { return mergeMode; }
+
 private:
     void execute(ParsedResponse const& parsed);
 
     PluginEditor* editor;
     RepenteClient client;
+    bool mergeMode = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Bridge)
 };
