@@ -3,7 +3,7 @@
 ## Loop Position
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete — ready for next PLAN]
+  ✓        ○        ○     [Plan created — awaiting approval]
 ```
 
 ## Active Milestone
@@ -13,25 +13,25 @@ Milestone 2: Full UX
 04-bidirectionality (Plan 2 of 3 complete)
 
 ## Active Plan
-— (04-02 complete, 04-03 not yet planned)
+04-03 — Session persistence (conversation history + /history command)
 
 ## Last Action
-2026-05-02 — 04-02 UNIFY complete
+2026-05-02 — 04-03 PLAN created
 
 ## Next Action
-/paul:plan 04-bidirectionality/04-03
+/paul:apply 04-bidirectionality/04-03
 
 ## Progress
 - Phase 01: 100% ✅
 - Phase 02: 100% ✅
 - Phase 03: 100% ✅
-- Phase 04: 66% — 2/3 plans complete
+- Phase 04: 66% — 2/3 plans complete (04-03 planned)
 
 ## Session Continuity
 Last session: 2026-05-02
-Stopped at: 04-02 UNIFY done
-Next action: /paul:plan 04-bidirectionality/04-03 (session persistence)
-Resume file: .paul/phases/04-bidirectionality/04-02-SUMMARY.md
+Stopped at: 04-03 PLAN complete, awaiting APPLY
+Next action: /paul:apply 04-bidirectionality/04-03
+Resume file: .paul/phases/04-bidirectionality/04-03-PLAN.md
 
 ## Open Items
 - ffmpeg `build_ffmpeg.sh` 10.9→10.13 patch: must commit to pd-else submodule for macOS CI
