@@ -998,10 +998,10 @@ RepentePd::PromptInput* PluginEditor::getPromptInput() const
 
 void PluginEditor::refreshObjectsPanel()
 {
-    if (!executor) return;
-    executor->pruneDeletedObjects();
+    if (executor)
+        executor->pruneDeletedObjects();
     if (auto* panel = sidebar->getObjectsPanel())
-        panel->refresh(*executor);
+        panel->refresh(getCurrentCanvas(), executor.get());
 }
 
 // Updates command status asynchronously

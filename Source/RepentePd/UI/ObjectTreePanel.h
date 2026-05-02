@@ -8,6 +8,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "RepentePd/Core/Executor.h"
 
+class Canvas;
+
 namespace RepentePd {
 
 class ObjectTreePanel final : public juce::Component {
@@ -15,6 +17,9 @@ public:
     ObjectTreePanel();
     ~ObjectTreePanel() override = default;
 
+    // Full canvas scan — shows all objects; executor provides names for REPL-created ones.
+    void refresh(Canvas* canvas, Executor const* executor = nullptr);
+    // Legacy: reads from executor registry only.
     void refresh(Executor const& executor);
 
     void paint(juce::Graphics& g) override;

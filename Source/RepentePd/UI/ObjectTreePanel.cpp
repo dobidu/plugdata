@@ -5,7 +5,11 @@
 
 #include "Utility/Config.h"
 #include "ObjectTreePanel.h"
+#include "Canvas.h"
+#include "Object.h"
+#include "Pd/Interface.h"
 #include "LookAndFeel.h"
+#include <unordered_map>
 
 namespace RepentePd {
 
@@ -25,6 +29,62 @@ juce::String ObjectTreePanel::classify(juce::String const& text)
 ObjectTreePanel::ObjectTreePanel()
 {
     displayLines.add("(no objects)");
+}
+
+void ObjectTreePanel::refresh(Canvas* canvas, Executor const* executor)
+{
+    displayLines.clear();
+
+    if (!canvas || canvas->objects.empty()) {
+        displayLines.add("(no objects)");
+        repaint();
+        return;
+    }
+
+    // Build ptr → name lookup from executor registry
+    std::unordered_map<void*, juce::String> ptrToName;
+    if (executor) {
+        for (auto const& [name, entry] : executor->getRegistry())
+            if (entry.ptr) ptrToName[entry.ptr] = name;
+    }
+
+    juce::StringArray dsp, ui, ctrl;
+    for (auto* obj : canvas->objects) {
+        juce::String text;
+        if (auto* ptr = obj->getPointer())
+            text = pd::Interface::getObjectText((t_object const*)ptr);
+        if (text.isEmpty())
+            text = obj->getType();
+        if (text.isEmpty()) continue;
+
+        auto it = ptrToName.find(obj->getPointer());
+        juce::String line = (it != ptrToName.end())
+            ? it->second + "  [" + text + "]"
+            : "[" + text + "]";
+
+        auto cat = classify(text);
+        if (cat == "DSP")     dsp.add(line);
+        else if (cat == "UI") ui.add(line);
+        else                  ctrl.add(line);
+    }
+
+    if (dsp.isEmpty() && ui.isEmpty() && ctrl.isEmpty()) {
+        displayLines.add("(no objects)");
+        repaint();
+        return;
+    }
+
+    auto addGroup = [&](juce::String const& header, juce::StringArray const& items) {
+        if (items.isEmpty()) return;
+        displayLines.add(header);
+        for (auto const& n : items)
+            displayLines.add("  " + n);
+    };
+    addGroup("DSP", dsp);
+    addGroup("UI", ui);
+    addGroup("Control", ctrl);
+
+    repaint();
 }
 
 void ObjectTreePanel::refresh(Executor const& executor)
