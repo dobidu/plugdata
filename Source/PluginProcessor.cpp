@@ -185,6 +185,7 @@ PluginProcessor::PluginProcessor()
     // first launch.
     initialisePd(pdlua_version);
     logMessage(pdlua_version);
+    logMessage("repente-pd v0.4");
 
     updateSearchPaths();
 
