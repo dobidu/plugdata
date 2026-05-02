@@ -128,6 +128,11 @@ PromptInput::PromptInput(PluginEditor* ed, Executor* ex)
         SettingsFile::getInstance()->saveSettings();
     };
     addAndMakeVisible(mergeToggle);
+
+    // Label is a child of the toggle so clicks on "merge" text propagate to the checkbox.
+    mergeLabel.setFont(Fonts::getDefaultFont().withHeight(13.0f));
+    mergeLabel.setJustificationType(juce::Justification::centredLeft);
+    mergeToggle.addAndMakeVisible(mergeLabel);
 }
 
 void PromptInput::setBridge(Bridge* b)
@@ -141,12 +146,13 @@ void PromptInput::resized()
 {
     CommandInput::resized();
 
-    // Layout: [toggle] [>] [text field ............] [×]
-    // Toggle at far left; ">" drawn by paintOverChildren at toggle's right edge;
-    // text field pushed right to clear both.
-    constexpr int leftPad = 4;
-    constexpr int toggleW = 64;
-    constexpr int gap     = 4;
+    // Layout: [☐ merge] [>] [text field ............] [×]
+    // mergeToggle = checkbox (22px) + mergeLabel child fills the rest.
+    constexpr int leftPad  = 4;
+    constexpr int checkW   = 22;
+    constexpr int labelW   = 40;
+    constexpr int toggleW  = checkW + labelW; // 62px total
+    constexpr int gap      = 4;
 
     for (auto* child : getChildren()) {
         if (dynamic_cast<juce::TextEditor*>(child)) {
@@ -157,6 +163,8 @@ void PromptInput::resized()
     }
 
     mergeToggle.setBounds(leftPad, getHeight() - 30, toggleW, 28);
+    // Label positioned inside toggle's local bounds, right of checkbox area
+    mergeLabel.setBounds(checkW, 0, labelW, 28);
 }
 
 void PromptInput::paintOverChildren(Graphics& g)
