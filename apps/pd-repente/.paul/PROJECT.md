@@ -43,8 +43,11 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 
 ## Active Requirements
 
-- [ ] RepenteClient: HTTP/SSE LLM bridge, natural language → patch — Phase 03
-- [ ] /config panel: server URL, model, privacy mode — Phase 03
+- [ ] RepenteClient: async HTTP POST to OpenAI-compat endpoint, callback on message thread — Phase 03
+- [ ] LLM response auto-detection: pd patch text → new tab; Lua/pds code → Lua engine; /pds lines → Executor — Phase 03
+- [ ] PdParser: detect response format, write temp .pd file for patch responses, open as new tab — Phase 03
+- [ ] Bridge: connects RepenteClient → PdParser → execution path; wires PromptInput free-text — Phase 03
+- [ ] /config panel: server URL, model, API key, server auto-detect — Phase 03
 - [ ] Canvas serializer for context injection — Phase 04
 - [ ] ObjectTreePanel: full canvas scan (GUI-added + sub-objects) — Phase 04
 
@@ -60,6 +63,8 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 | Executor per-canvas CanvasState map | 02-02 | Isolates registry per tab; save/restore on switch |
 | pds Lua closures as private static members of PromptInput | 02-04 | File-scope statics can't access class-private fields |
 | pruneDeletedObjects hooked into Canvas::performSynchronise | 02-04 | Cheapest hook — covers GUI delete, undo, all pd mutations |
+| LLM pd-patch responses open as new tab (not merged) | 03 | Non-destructive; plugdata handles .pd load natively via temp file |
+| LLM response format auto-detected: #N canvas → patch; pds./Lua → Lua engine; /pds lines → Executor | 03 | Single parser handles all response types; no LLM prompt constraints |
 
 ---
-*Last updated: 2026-05-01 after Phase 02 complete*
+*Last updated: 2026-05-01 — Phase 03 requirements confirmed*

@@ -3,34 +3,34 @@
 ## Loop Position
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Phase 02 complete — ready to plan Phase 03]
+  ✓        ✓        ✓     [Loop complete — ready for next PLAN]
 ```
 
 ## Active Milestone
 Milestone 1: MVP
 
 ## Active Phase
-03-repente-bridge (not started)
+03-repente-bridge (Plan 1 of 3 complete)
 
 ## Active Plan
-None — ready for /paul:plan 03-repente-bridge/03-01
+None — ready for /paul:plan 03-repente-bridge/03-02
 
 ## Last Action
-2026-05-01 — Phase 02 pd-script REPL complete (4/4 plans); transitioned to Phase 03
+2026-05-01 — 03-01 unified (RepenteClient + deps)
 
 ## Next Action
-/paul:plan 03-repente-bridge/03-01
+/paul:plan 03-repente-bridge/03-02
 
 ## Progress
 - Milestone 1 (MVP): 2/3 phases complete (~67%)
 - Phase 02: 100% — all 4 plans done ✅
-- Phase 03: 0% — not started
+- Phase 03: 33% — Plan 1/3 complete
 
 ## Session Continuity
 Last session: 2026-05-01
-Stopped at: Phase 02 complete, ready to plan Phase 03
-Next action: /paul:plan 03-repente-bridge/03-01
-Resume file: .paul/ROADMAP.md
+Stopped at: 03-01 complete — RepenteClient + deps shipped
+Next action: /paul:plan 03-repente-bridge/03-02
+Resume file: .paul/phases/03-repente-bridge/03-01-SUMMARY.md
 
 ## Open Items
 - ffmpeg `build_ffmpeg.sh` 10.9→10.13 patch: must commit to pd-else submodule for macOS CI
@@ -50,5 +50,5 @@ Resume file: .paul/ROADMAP.md
 - Executor per-canvas CanvasState map for registry isolation (02-02)
 
 ### Git State
-Last commit: 1778ce55a
+Last commit: 5a91fd9ad
 Branch: pd-repente-main
