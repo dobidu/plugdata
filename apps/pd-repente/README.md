@@ -1,69 +1,41 @@
 # pd-repente
 
-> plugdata + Repente: compose Pure Data patches by describing what you want to hear.
+> Describe what you want to hear. A working Pure Data patch appears on the canvas and plays immediately.
 
-**Stack:** C++17 · JUCE 7.x · libpd · cpp-httplib · nlohmann/json · CMake 3.21+
-**License:** GPL (plugdata fork)
-
----
-
-## Overview
-
-`pd-repente` is a fork of [plugdata](https://github.com/plugdata-team/plugdata) that integrates a local-first LLM (via OpenAI-compatible API) as a musical composition assistant. Type a description of what you want to hear; a valid Pure Data patch appears on the canvas and plays immediately.
-
-No chat interface, no copy-paste workflow. The patch is the output.
-
-**Primary target:** sound designers and composers (P1 — Tier 1 hardware: RTX 5070 / M4+).
+[![CI](https://github.com/dobidu/plugdata/actions/workflows/cmake.yml/badge.svg)](https://github.com/dobidu/plugdata/actions)
+[![License: GPL](https://img.shields.io/badge/license-GPL-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Win%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 
 ---
 
-## Current State (Phase 04 in progress)
+## What it is
 
-- ✅ **Phase 01** — Fork + CI matrix (Win/Mac/Linux), PromptBar renders
-- ✅ **Phase 02** — pd-script REPL: `/pds` commands, sugar syntax, Lua+pds API, ObjectTreePanel
-- ✅ **Phase 03** — LLM bridge: RepenteClient, PdParser, Bridge wiring, `/config` command, SettingsFile persistence
-- 🔵 **Phase 04** — Bidirectionality: canvas context injection (done), full ObjectTreePanel scan (done), session persistence (upcoming)
+`pd-repente` is a fork of [plugdata](https://github.com/plugdata-team/plugdata) with an integrated LLM composition assistant. You type a musical idea in plain language — "a filtered noise burst with slow attack" — and a valid Pure Data patch is generated, placed on the canvas, and starts running. No switching windows, no copy-pasting, no prompt engineering. The patch is the output.
 
-**Demo-ready:** free text → LLM → valid pd patch on canvas, plays immediately. Tested with Ollama (local Mac M4).
+The LLM is context-aware: every request includes the current canvas state as a system message in pd-file format, so the model knows what is already on the canvas before generating anything new. You can build on existing patches incrementally, ask questions about them, or generate from scratch.
+
+`pd-repente` is local-first. It works with any OpenAI-compatible server — Ollama, llama-server, LM Studio, or the OpenAI API — and defaults to `localhost`. No data leaves your machine unless you explicitly point it at a remote endpoint.
 
 ---
 
-## Architecture
+## Features
 
-```
-User input (free text or /pds command)
-         │
-    PromptInput (JUCE Component, bottom of canvas)
-         │
-    ┌────┴────────────────┐
-    │                     │
-PD-SCRIPT ENGINE     REPENTE BRIDGE
-(CommandParser +     (Bridge →
- SugarExpander →      CanvasSerializer →
- Executor)            RepenteClient HTTP →
-    │                  PdParser →
-    │                  Executor / openPatch)
-    └────────┬──────────┘
-             │
-        EXECUTOR
-        (pd::Patch wrapper,
-         per-canvas registry,
-         message thread only)
-             │
-       PURE DATA CANVAS (libpd)
-```
-
-**Threading model:**
-- Audio thread: never touched by new code
-- HTTP thread (`std::thread`): all RepenteClient calls
-- Canvas mutations: message thread only via `MessageManager::callAsync`
-- Cancel token (`shared_ptr<atomic<bool>>`): safe shutdown of detached threads
+- **Natural language → patch** — free text sent to LLM, response auto-detected and executed (pd patch, pds commands, or Lua)
+- **Context-aware generation** — canvas serialized to pd-file format and injected as system message on every request
+- **Analysis mode** — `/analyze <question>` asks the LLM about the current patch and returns plain text; nothing is executed on the canvas
+- **Merge mode** — toggle in the prompt bar; generated patches merge into the current canvas instead of opening a new tab
+- **pd-script REPL** — `/pds create / connect / delete / move / list` directly manipulate canvas objects
+- **Sugar syntax** — `@osc~`, `~filter~`, `-> dac~`, `$last` shortcuts for fast patching
+- **Lua scripting** — `{ }` blocks run inline Lua with full `pds.*` API for generative patching
+- **Object Tree Panel** — sidebar shows all canvas objects grouped by type (DSP / UI / Control), including LLM-generated ones
+- **Persistent config** — LLM URL, model name, and API key stored across restarts
+- **Local-first** — defaults to `localhost`; works fully offline with a local model
 
 ---
 
 ## Quick Start
 
-### Build (Linux / macOS)
+### Build
 
 ```bash
 git clone --recursive https://github.com/dobidu/plugdata.git
@@ -72,136 +44,260 @@ cmake -S . -B build -G Ninja
 cmake --build build --target plugdata_standalone_Standalone -j$(nproc)
 ```
 
-### Configure LLM server
+Binary: `build/plugdata_artefacts/Standalone/plugdata`
+
+### Connect an LLM
 
 ```
-/config url http://localhost:11434   # Ollama default
-/config model llama3.2               # or any OpenAI-compat model
-/config test                         # ping server
+/config url http://localhost:11434    # Ollama running locally
+/config model llama3.2               # any OpenAI-compat model name
+/config test                         # verify connection
 ```
 
-Settings persist across restarts via SettingsFile.
-
-### Usage
+### Make sound
 
 ```
-# Free text → LLM → patch on canvas
-make a simple drone with osc~ and dac~
+make a sine wave at 440 Hz connected to output
+```
 
-# pd-script REPL
+A patch with `osc~ 440` → `dac~` appears and plays. That's it.
+
+---
+
+## Usage
+
+### Free text → patch
+
+Type any musical description. The LLM receives your text plus the current canvas state and responds with a patch, a set of pds commands, or a Lua block — `pd-repente` detects the format automatically and executes it.
+
+```
+a four-voice chord with detuned oscillators and a reverb tail
+add a low-pass filter with a slow LFO on the cutoff
+route everything through a soft limiter before dac~
+```
+
+New patches open in a new tab by default. Enable **merge mode** to insert objects into the current canvas instead.
+
+### Analysis mode
+
+Use `/analyze` when you want to ask about the patch without triggering execution. The LLM sees the full canvas context and responds in plain text — nothing is created or modified.
+
+```
+/analyze what does this patch do?
+/analyze why might this be clipping?
+/analyze suggest a way to add stereo width
+```
+
+### Merge mode
+
+The **merge** toggle in the prompt bar (left side) controls where generated patches land:
+
+- **Off** (default): each LLM patch opens in a new tab
+- **On**: objects and connections are inserted into the current canvas
+
+State persists across restarts.
+
+### pd-script REPL
+
+Direct canvas manipulation without the LLM:
+
+```
 /pds create osc~ 100 100
 /pds create dac~ 100 200
 /pds connect osc~ dac~ 0 0
-
-# Lua
-{ for i=1,4 do pds.create("osc~", i*80, 100) end }
-
-# Debug canvas context sent to LLM
-/canvas
-
-# Help
-/help commands
-/help llm
-/help pds
+/pds move osc~ 200 100
+/pds delete osc~
+/pds list
 ```
 
----
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `<free text>` | Send to LLM bridge; canvas state injected as context |
-| `/pds <cmd>` | pd-script engine (create / connect / delete / move / list) |
-| `/lua <expr>` | Run Lua expression |
-| `/config [url\|model\|key\|test]` | Show or set LLM server config |
-| `/canvas` | Show serialized canvas state sent to LLM (debug) |
-| `/help [topic]` | Help: pds · sugar · lua · llm · commands · builtin |
-| `/clear` | Clear console |
+Objects created via `/pds` get auto-assigned names (`osc_1`, `dac_1`, …) used for subsequent connect/move/delete.
 
 ### Sugar syntax
 
+Shortcuts that expand before parsing:
+
 ```
-@osc~              → /pds create osc~
-~osc~              → /pds create osc~~ (tilde suffix)
--> dac~            → create + auto-connect from last object
-$last              → expands to last created object name
+@osc~ 440          → /pds create osc~ 440
+~filter~           → /pds create filter~
+-> dac~            → create dac~ + auto-connect from last object
+$last              → expands to the last created object name
+```
+
+### Lua scripting
+
+Wrap any Lua expression in `{ }`. The `pds` table gives synchronous access to the REPL from Lua:
+
+```lua
+{ for i=1,4 do pds.create("osc~", i*80, 100) end }
+
+{
+  local n = pds.create("osc~", 100, 100)
+  local d = pds.create("dac~", 100, 200)
+  pds.connect(n, 0, d, 0)
+}
+```
+
+`pd.post(msg)` logs to console. `pd.eval(cmd)` runs any REPL command string from Lua.
+
+### Debugging canvas context
+
+```
+/canvas
+```
+
+Prints the pd-file snapshot that will be sent to the LLM as system context on the next request. Useful for verifying what the model sees.
+
+---
+
+## Command Reference
+
+| Command | Description |
+|---|---|
+| `<free text>` | Send to LLM; canvas state injected automatically |
+| `/analyze <question>` | Ask LLM about the patch — text response only, no execution |
+| `/pds <cmd>` | pd-script REPL (create / connect / delete / move / list) |
+| `/lua <expr>` | Run Lua expression inline |
+| `/config` | Show current LLM settings |
+| `/config url <url>` | Set server URL (OpenAI-compatible) |
+| `/config model <name>` | Set model name |
+| `/config key <key>` | Set API key (stored, masked in display) |
+| `/config test` | Ping server and verify connectivity |
+| `/canvas` | Print serialized canvas state (debug) |
+| `/help [topic]` | Help topics: `pds` · `sugar` · `lua` · `llm` · `commands` · `builtin` |
+| `/clear` | Clear console |
+
+---
+
+## LLM Backend Setup
+
+`pd-repente` speaks the OpenAI Chat Completions API (`POST /v1/chat/completions`). Any compatible server works.
+
+### Ollama (recommended for local use)
+
+```bash
+ollama serve
+ollama pull llama3.2   # or any model
+```
+
+```
+/config url http://localhost:11434
+/config model llama3.2
+```
+
+### llama-server / LM Studio
+
+```
+/config url http://localhost:1234   # LM Studio default
+/config model <loaded-model-name>
+```
+
+### OpenAI API
+
+```
+/config url https://api.openai.com
+/config model gpt-4o
+/config key sk-...
+```
+
+### Repente model (recommended)
+
+The Repente model is fine-tuned specifically for Pure Data patch generation and outputs clean, runnable pd syntax by default. Available on Hugging Face — run it with Ollama or llama-server.
+
+```
+/config url http://localhost:11434
+/config model repente-1
 ```
 
 ---
 
-## LLM Bridge
+## Architecture
 
-**Endpoint:** `POST {repente_url}/v1/chat/completions` (OpenAI-compatible)
+For contributors and developers.
 
-**Context injection:** every request includes a `role: system` message with the current canvas serialized as pd-file format — objects and connections. Empty canvas = no system message.
+### Component overview
 
-**Response parsing (PdParser):** auto-detects format:
-- `#N canvas ...` → PD_PATCH: opens as new tab
-- `/pds ...` lines → PDS_COMMANDS: executes via Executor
-- anything else → LUA_BLOCK: runs in Lua engine
+```
+User input (free text or /pds command)
+        │
+   PromptInput  ──  merge toggle
+        │
+   ┌────┴──────────────────────┐
+   │                           │
+PD-SCRIPT ENGINE          REPENTE BRIDGE
+CommandParser              Bridge
+SugarExpander         CanvasSerializer ──→ pd-file context
+Executor              RepenteClient   ──→ HTTP POST /v1/chat/completions
+   │                  PdParser
+   │                  Executor / openPatch / PatchMerger
+   └──────┬───────────┘
+          │
+       EXECUTOR
+       pd::Patch wrapper
+       per-canvas registry
+       message thread only
+          │
+    PURE DATA CANVAS (libpd)
+```
 
-**Supported servers:** Ollama, llama-server, OpenAI API, any OpenAI-compat endpoint.
+### Response routing
+
+`PdParser` auto-detects LLM response format:
+
+| Detected format | Route | Effect |
+|---|---|---|
+| Starts with `#N canvas` | PD_PATCH | Open new tab (or merge via PatchMerger) |
+| Lines starting with `/pds` | PDS_COMMANDS | Execute via Executor |
+| Anything else | LUA_BLOCK | Run in Lua engine |
+
+`/analyze` bypasses `PdParser` entirely — response logged as plain text.
+
+### Threading model
+
+- **Audio thread** — never touched by repente code
+- **HTTP thread** (`std::thread`) — all `RepenteClient` network calls
+- **Message thread** — all canvas mutations, via `MessageManager::callAsync`
+- **Cancel token** (`shared_ptr<atomic<bool>>`) — safe shutdown of detached threads on quit
+
+### Key design decisions
+
+| Decision | Rationale |
+|---|---|
+| pd-file format for canvas context | LLMs are trained on it; no translation layer needed |
+| OpenAI-compat API only | Switching model = switching URL; no binary integration |
+| Per-canvas Executor registry | Object identity (`osc_1`) isolated per tab |
+| SettingsFile for config | Custom keys registered in `defaultSettings`; cross-platform persistence |
+| CONFIGURE_DEPENDS on cmake glob | New `Bridge/*.cpp` files auto-included without reconfigure |
 
 ---
 
-## Object Tree Panel
+## Roadmap
 
-Shows all objects on the current canvas, grouped by type:
-- **DSP** — signal-rate objects (ending in `~`)
-- **UI** — GUI objects (bng, tgl, sliders, etc.)
-- **Control** — message-rate objects
+- **Phase 04** (current) — bidirectionality: context injection, analysis mode, merge mode, session persistence
+- **Phase 05** — auto-layout (smart object placement via `CanvasLayouter`), Ollama auto-detect, first-launch wizard, V1.0 public release
 
-REPL-created objects show with their auto-assigned name: `osc_1  [osc~]`
-Canvas/LLM objects show read-only: `[osc~]`
+Media, screenshots, and demo patches will be added at V1.0.
 
 ---
 
 ## Stack
 
-| Layer | Choice | Rationale |
-|---|---|---|
-| Host | C++17 + JUCE 7.x + libpd | plugdata existing stack |
-| HTTP client | cpp-httplib (header-only, vendored) | Simple, no build deps |
-| JSON | nlohmann/json (header-only, vendored) | Zero build complexity |
-| Scripting | pd-lua (Lua 5.4) | Existing pd-lua integration |
-| Build | CMake 3.21+ + Ninja | Already in use |
-| LLM backend | Ollama / llama-server / OpenAI | External — OpenAI-compat API |
-| Settings | SettingsFile (plugdata built-in) | Persistent config, cross-platform |
-| CI | GitHub Actions matrix | Win/Mac/Linux |
+| Layer | Choice |
+|---|---|
+| Host | C++17 + JUCE 7.x + libpd |
+| HTTP client | cpp-httplib (header-only, vendored) |
+| JSON | nlohmann/json (header-only, vendored) |
+| Scripting | pd-lua / LuaJIT 5.4 |
+| Build | CMake 3.21+ + Ninja |
+| CI | GitHub Actions (Win / macOS / Linux) |
 
 ---
 
-## Key Design Decisions
+## License
 
-1. **OpenAI-compat API only** — switching model = switching URL, no binary integration
-2. **pd-file format for context** — LLMs are trained on it; no translation layer
-3. **Cancel token (`shared_ptr<atomic<bool>>`)** — detached HTTP threads safe on shutdown
-4. **SettingsFile for config** — all custom keys must be registered in `defaultSettings` map
-5. **Canvas scan for ObjectTreePanel** — reads all canvas objects + overlays REPL names
-6. **CONFIGURE_DEPENDS on cmake glob** — new Bridge/*.cpp files auto-included without reconfigure
-7. **Per-canvas Executor registry** — object identity (`osc_1`) isolated per tab
+GPL — same as plugdata. See [LICENSE](../../LICENSE).
+
+Based on [plugdata](https://github.com/plugdata-team/plugdata) by Timothy Schoen et al.
 
 ---
 
-## Implementation Phases
-
-| Phase | Status | Outcome |
-|-------|--------|---------|
-| 01: Foundation | ✅ Complete | Fork builds Win/Mac/Linux; CI green; PromptBar renders |
-| 02: pd-script REPL | ✅ Complete | /pds + sugar + Lua+pds API + ObjectTreePanel |
-| 03: Repente Bridge | ✅ Complete | Free text → LLM → canvas; /config; persistent settings |
-| 04: Bidirectionality | 🔵 In progress | Canvas context injection; full canvas scan; sessions (upcoming) |
-| 05: V1.0 Polish | ⬜ Planned | Ollama auto-detect; first-launch wizard; public release |
-
----
-
-## References
-
-- plugdata: https://github.com/plugdata-team/plugdata
-- Ollama: https://ollama.com
-- `apps/pd-repente/.paul/` — PAUL planning framework (phases, plans, state)
-
----
-
-*Last updated: 2026-05-02 — Phase 04 in progress*
+*Planning and phase tracking: `.paul/` (PAUL framework)*
