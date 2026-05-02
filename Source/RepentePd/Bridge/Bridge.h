@@ -28,6 +28,7 @@ public:
     void setConfig(RepenteClient::Config cfg);
     [[nodiscard]] RepenteClient::Config const& getConfig() const;
     [[nodiscard]] bool isBusy() const;
+    void ping(std::function<void(bool, juce::String)> callback);
 
 private:
     void execute(ParsedResponse const& parsed);

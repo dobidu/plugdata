@@ -285,6 +285,15 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     bridge = std::make_unique<RepentePd::Bridge>(this);
     promptInput->setBridge(bridge.get());
 
+    {
+        auto* sf = SettingsFile::getInstance();
+        RepentePd::RepenteClient::Config cfg;
+        if (sf->hasProperty("repente_url"))   cfg.url    = sf->getProperty<String>("repente_url");
+        if (sf->hasProperty("repente_model")) cfg.model  = sf->getProperty<String>("repente_model");
+        if (sf->hasProperty("repente_key"))   cfg.apiKey = sf->getProperty<String>("repente_key");
+        bridge->setConfig(std::move(cfg));
+    }
+
     statusbar->setAlwaysOnTop(true);
     addAndMakeVisible(statusbar.get());
 

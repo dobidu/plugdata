@@ -31,6 +31,9 @@ public:
     bool send(juce::String const& prompt,
               std::function<void(juce::String)> callback);
 
+    // Non-blocking GET /models ping. Fires callback(connected, message) on message thread.
+    void ping(std::function<void(bool, juce::String)> callback);
+
     void setConfig(Config cfg);
     [[nodiscard]] Config const& getConfig() const { return config; }
     [[nodiscard]] bool isBusy() const { return busy.load(); }

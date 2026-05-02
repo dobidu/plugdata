@@ -110,4 +110,65 @@ bool RepenteClient::send(juce::String const& prompt,
     return true;
 }
 
+void RepenteClient::ping(std::function<void(bool, juce::String)> callback)
+{
+    auto cfg = config;
+
+    std::thread([cfg, cb = std::move(callback)]() mutable {
+        bool ok = false;
+        juce::String msg;
+        try {
+            juce::String url = cfg.url;
+            if (url.endsWithChar('/')) url = url.dropLastCharacters(1);
+
+            bool useHttps = url.startsWithIgnoreCase("https://");
+            juce::String host = useHttps ? url.substring(8) : url.substring(7);
+
+            juce::String pathPrefix;
+            int port = useHttps ? 443 : 80;
+
+            int slashPos = host.indexOf("/");
+            if (slashPos >= 0) {
+                pathPrefix = host.substring(slashPos);
+                host = host.substring(0, slashPos);
+            }
+
+            int colonPos = host.lastIndexOf(":");
+            if (colonPos >= 0) {
+                port = host.substring(colonPos + 1).getIntValue();
+                host = host.substring(0, colonPos);
+            }
+
+            std::string endpoint = (pathPrefix + "/v1/models").toStdString();
+
+            httplib::Client cli(host.toStdString(), port);
+            cli.set_connection_timeout(5);
+            cli.set_read_timeout(5);
+
+            httplib::Headers headers;
+            if (cfg.apiKey.isNotEmpty())
+                headers.emplace("Authorization", "Bearer " + cfg.apiKey.toStdString());
+
+            auto res = cli.Get(endpoint, headers);
+
+            if (!res) {
+                msg = juce::String(httplib::to_string(res.error()).c_str());
+            } else if (res->status == 200) {
+                ok = true;
+                json j = json::parse(res->body, nullptr, false);
+                if (!j.is_discarded() && j.contains("data"))
+                    msg = "models available: " + juce::String((int)j["data"].size());
+                else
+                    msg = "connected (status 200)";
+            } else {
+                msg = "HTTP " + juce::String(res->status);
+            }
+        }
+        catch (std::exception const& e) { msg = juce::String(e.what()); }
+        catch (...)                      { msg = "unknown exception"; }
+
+        juce::MessageManager::callAsync([cb, ok, msg] { cb(ok, msg); });
+    }).detach();
+}
+
 } // namespace RepentePd

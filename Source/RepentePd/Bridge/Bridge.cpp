@@ -15,6 +15,7 @@ Bridge::Bridge(PluginEditor* ed) : editor(ed) {}
 void Bridge::setConfig(RepenteClient::Config cfg) { client.setConfig(std::move(cfg)); }
 RepenteClient::Config const& Bridge::getConfig() const { return client.getConfig(); }
 bool Bridge::isBusy() const { return client.isBusy(); }
+void Bridge::ping(std::function<void(bool, juce::String)> callback) { client.ping(std::move(callback)); }
 
 bool Bridge::send(juce::String const& prompt, std::function<void(bool)> onDone)
 {
