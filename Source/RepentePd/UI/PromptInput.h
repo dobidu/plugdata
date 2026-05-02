@@ -10,6 +10,8 @@
 
 struct lua_State;
 
+namespace RepentePd { class Bridge; }
+
 namespace RepentePd {
 
 // Unified prompt bar: routes /pds to Executor, slash-prefixed commands to
@@ -23,6 +25,8 @@ public:
 
     // Called after every async REPL callback. PluginEditor sets this to refresh ObjectTreePanel.
     std::function<void()> onRegistryChanged;
+
+    void setBridge(Bridge* b) { bridge = b; }
 
 protected:
     StringArray const& getHelperCommands() const override { return pdsHelperCommands; }
@@ -39,6 +43,7 @@ private:
 
     PluginEditor* pluginEditor;
     Executor*     executor;
+    Bridge*       bridge = nullptr;
 
     static inline StringArray const pdsHelperCommands = {
         "/pds create", "/pds connect", "/pds delete", "/pds list", "/pds move"

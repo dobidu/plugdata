@@ -7,6 +7,7 @@
 #include "PromptInput.h"
 #include "RepentePd/Commands/CommandParser.h"
 #include "RepentePd/Commands/SugarExpander.h"
+#include "RepentePd/Bridge/Bridge.h"
 extern "C" {
 #include <pd-lua/luas/luajit/src/lua.h>
 #include <pd-lua/luas/luajit/src/lauxlib.h>
@@ -255,8 +256,12 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
         return CommandInput::executeCommand(pdInstance, msg);
     }
 
-    // Free text → Repente LLM prompt (bridge wired in Phase 03)
-    pdInstance->logMessage("repente: " + msg + " [Phase 03]");
+    // Free text → Repente LLM bridge
+    if (bridge) {
+        bridge->send(msg);
+    } else {
+        pdInstance->logMessage("repente: not configured -- use /help llm");
+    }
     return {};
 }
 

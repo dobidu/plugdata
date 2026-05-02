@@ -25,6 +25,7 @@
 #include "RepentePd/Core/Executor.h"
 
 namespace RepentePd { class PromptInput; }
+namespace RepentePd { class Bridge; }
 
 class ConnectionMessageDisplay;
 class Sidebar;
@@ -95,6 +96,7 @@ public:
     void updateCommandStatus();
     void handleAsyncUpdate() override;
     void refreshObjectsPanel();
+    [[nodiscard]] RepentePd::PromptInput* getPromptInput() const;
 
     void updateSelection(Canvas* cnv);
     void setCommandButtonObject(Object const* obj);
@@ -218,6 +220,7 @@ private:
 
     std::unique_ptr<RepentePd::PromptInput> promptInput;
     std::unique_ptr<RepentePd::Executor> executor;
+    std::unique_ptr<RepentePd::Bridge> bridge;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

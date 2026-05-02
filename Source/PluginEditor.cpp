@@ -39,6 +39,7 @@
 #include "NVGSurface.h"
 #include "RepentePd/UI/PromptInput.h"
 #include "RepentePd/UI/ObjectTreePanel.h"
+#include "RepentePd/Bridge/Bridge.h"
 
 #if ENABLE_TESTING
 void runTests(PluginEditor* editor);
@@ -280,6 +281,9 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         if (auto* panel = sidebar->getObjectsPanel())
             panel->refresh(*executor);
     };
+
+    bridge = std::make_unique<RepentePd::Bridge>(this);
+    promptInput->setBridge(bridge.get());
 
     statusbar->setAlwaysOnTop(true);
     addAndMakeVisible(statusbar.get());
@@ -976,6 +980,11 @@ void PluginEditor::settingsChanged(String const& name, var const& value)
 void PluginEditor::modifierKeysChanged(ModifierKeys const& modifiers)
 {
     setModifierKeys(modifiers);
+}
+
+RepentePd::PromptInput* PluginEditor::getPromptInput() const
+{
+    return promptInput.get();
 }
 
 void PluginEditor::refreshObjectsPanel()
