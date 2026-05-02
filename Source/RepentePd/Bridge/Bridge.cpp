@@ -9,10 +9,12 @@
 #include "RepentePd/Bridge/PatchMerger.h"
 #include "RepentePd/UI/PromptInput.h"
 #include "PluginEditor.h"
+#include "Utility/SettingsFile.h"
+#include <algorithm>
 
 namespace RepentePd {
 
-Bridge::Bridge(PluginEditor* ed) : editor(ed) {}
+Bridge::Bridge(PluginEditor* ed) : editor(ed) { loadHistory(); }
 
 void Bridge::setConfig(RepenteClient::Config cfg) { client.setConfig(std::move(cfg)); }
 RepenteClient::Config const& Bridge::getConfig() const { return client.getConfig(); }
@@ -30,7 +32,15 @@ bool Bridge::send(juce::String const& prompt, bool analyzeOnly, std::function<vo
     if (editor && editor->pd)
         editor->pd->logRepente(analyzeOnly ? "repente: analyzing..." : "repente: thinking...");
 
-    return client.send(prompt, context, [this, analyzeOnly, onDone](juce::String const& response) {
+    // Build full messages array: system (canvas) + history + new user prompt
+    std::vector<RepenteClient::Message> messages;
+    if (context.isNotEmpty())
+        messages.push_back({"system", context});
+    for (auto const& m : conversationHistory)
+        messages.push_back({m.role, m.content});
+    messages.push_back({"user", prompt});
+
+    return client.send(messages, [this, analyzeOnly, prompt, onDone](juce::String const& response) {
         jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
         if (response.startsWith("error:")) {
@@ -49,6 +59,13 @@ bool Bridge::send(juce::String const& prompt, bool analyzeOnly, std::function<vo
             if (onDone) onDone(true);
             return;
         }
+
+        // Append to history only for non-analyze successful turns
+        conversationHistory.push_back({"user",      prompt});
+        conversationHistory.push_back({"assistant", response});
+        while (static_cast<int>(conversationHistory.size()) > MAX_HISTORY_TURNS * 2)
+            conversationHistory.erase(conversationHistory.begin());
+        saveHistory();
 
         auto parsed = PdParser::parse(response);
         execute(parsed);
@@ -94,6 +111,62 @@ void Bridge::execute(ParsedResponse const& parsed)
             break;
         }
     }
+}
+
+void Bridge::clearHistory()
+{
+    conversationHistory.clear();
+    SettingsFile::getInstance()->setProperty("repente_history", juce::String(""));
+    SettingsFile::getInstance()->saveSettings();
+}
+
+int Bridge::historyTurnCount() const
+{
+    return static_cast<int>(std::count_if(conversationHistory.begin(), conversationHistory.end(),
+        [](HistoryMessage const& m) { return m.role == "user"; }));
+}
+
+void Bridge::saveHistory() const
+{
+    SettingsFile::getInstance()->setProperty("repente_history", serializeHistory(conversationHistory));
+    SettingsFile::getInstance()->saveSettings();
+}
+
+void Bridge::loadHistory()
+{
+    auto str = SettingsFile::getInstance()->getProperty<juce::String>("repente_history");
+    if (str.isNotEmpty())
+        conversationHistory = deserializeHistory(str);
+}
+
+juce::String Bridge::serializeHistory(std::vector<HistoryMessage> const& history)
+{
+    juce::Array<juce::var> arr;
+    for (auto const& m : history) {
+        auto* obj = new juce::DynamicObject();
+        obj->setProperty("role",    m.role);
+        obj->setProperty("content", m.content);
+        arr.add(juce::var(obj));
+    }
+    return juce::JSON::toString(juce::var(arr), /*allOnOneLine=*/true);
+}
+
+std::vector<Bridge::HistoryMessage> Bridge::deserializeHistory(juce::String const& jsonStr)
+{
+    std::vector<HistoryMessage> result;
+    auto parsed = juce::JSON::parse(jsonStr);
+    if (auto* arr = parsed.getArray()) {
+        for (auto const& item : *arr) {
+            if (auto* obj = item.getDynamicObject()) {
+                HistoryMessage m;
+                m.role    = obj->getProperty("role").toString();
+                m.content = obj->getProperty("content").toString();
+                if (m.role.isNotEmpty())
+                    result.push_back(std::move(m));
+            }
+        }
+    }
+    return result;
 }
 
 } // namespace RepentePd

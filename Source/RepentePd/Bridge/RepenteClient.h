@@ -7,6 +7,7 @@
 #include <juce_events/juce_events.h>
 #include <functional>
 #include <atomic>
+#include <vector>
 
 namespace RepentePd {
 
@@ -23,14 +24,18 @@ public:
         Config() : url("http://localhost:7860"), model("repente-1") {}
     };
 
+    struct Message {
+        juce::String role;     // "system" | "user" | "assistant"
+        juce::String content;
+    };
+
     explicit RepenteClient(Config cfg = {});
     ~RepenteClient() { cancelled->store(true); }
 
     // Fire-and-forget. Callback fires on message thread with response content,
     // or "error: <reason>" on failure. Returns false if client is already busy.
-    // systemContext is injected as role:system if non-empty.
-    bool send(juce::String const& prompt,
-              juce::String const& systemContext,
+    // Caller builds the full messages array (system context + history + user prompt).
+    bool send(std::vector<Message> const& messages,
               std::function<void(juce::String)> callback);
 
     // Non-blocking GET /models ping. Fires callback(connected, message) on message thread.

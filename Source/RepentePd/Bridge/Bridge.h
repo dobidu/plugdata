@@ -7,6 +7,7 @@
 #include "RepenteClient.h"
 #include "PdParser.h"
 #include <functional>
+#include <vector>
 
 class PluginEditor;
 
@@ -37,12 +38,24 @@ public:
     void setMergeMode(bool merge) { mergeMode = merge; }
     [[nodiscard]] bool getMergeMode() const { return mergeMode; }
 
+    void clearHistory();
+    [[nodiscard]] int historyTurnCount() const;
+
 private:
     void execute(ParsedResponse const& parsed);
+
+    struct HistoryMessage { juce::String role; juce::String content; };
+    static constexpr int MAX_HISTORY_TURNS = 20;
+
+    void saveHistory() const;
+    void loadHistory();
+    static juce::String serializeHistory(std::vector<HistoryMessage> const&);
+    static std::vector<HistoryMessage> deserializeHistory(juce::String const&);
 
     PluginEditor* editor;
     RepenteClient client;
     bool mergeMode = false;
+    std::vector<HistoryMessage> conversationHistory;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Bridge)
 };

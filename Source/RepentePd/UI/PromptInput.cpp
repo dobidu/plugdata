@@ -234,6 +234,8 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  /config              \xe2\x86\x92 show current settings\n"
                 "\n"
                 "  /analyze <question>  \xe2\x86\x92 ask LLM, text only, no execution\n"
+                "  /history             \xe2\x86\x92 show conversation turn count\n"
+                "  /history clear       \xe2\x86\x92 wipe conversation history\n"
                 "  <free text>          \xe2\x86\x92 generate patch (auto-detected + executed)\n"
                 "\n"
                 "  Default: http://localhost:7860  \xe2\x80\xa2  settings persist");
@@ -243,6 +245,8 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  /pds <cmd>       \xe2\x86\x92 pd-script  (/help pds)\n"
                 "  /lua <expr>      \xe2\x86\x92 Lua inline  (/help lua)\n"
                 "  /analyze <q>     \xe2\x86\x92 ask LLM, no execution\n"
+                "  /history         \xe2\x86\x92 show turn count\n"
+                "  /history clear   \xe2\x86\x92 wipe conversation history\n"
                 "  /config \xe2\x80\xa6        \xe2\x86\x92 LLM config  (/help llm)\n"
                 "  /canvas          \xe2\x86\x92 print canvas state (debug)\n"
                 "  /help [topic]    \xe2\x86\x92 this help\n"
@@ -280,6 +284,22 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
         } else {
             pdInstance->logMessage("repente: no active canvas");
         }
+        return {};
+    }
+
+    if (msg.startsWith("/history")) {
+        auto args = msg.substring(8).trim();
+        if (args == "clear") {
+            if (bridge) bridge->clearHistory();
+            pdInstance->logRepente("repente: history cleared");
+            return {};
+        }
+        int turns = bridge ? bridge->historyTurnCount() : 0;
+        if (turns == 0)
+            pdInstance->logRepente("repente: no conversation history");
+        else
+            pdInstance->logRepente("repente: " + juce::String(turns)
+                + " turn" + (turns == 1 ? "" : "s") + " in history");
         return {};
     }
 

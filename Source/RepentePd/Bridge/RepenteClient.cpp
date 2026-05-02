@@ -20,8 +20,7 @@ RepenteClient::RepenteClient(Config cfg) : config(std::move(cfg)) {}
 
 void RepenteClient::setConfig(Config cfg) { config = std::move(cfg); }
 
-bool RepenteClient::send(juce::String const& prompt,
-                         juce::String const& systemContext,
+bool RepenteClient::send(std::vector<Message> const& messages,
                          std::function<void(juce::String)> callback)
 {
     if (busy.exchange(true)) {
@@ -35,7 +34,7 @@ bool RepenteClient::send(juce::String const& prompt,
     auto* busy_    = &busy;
     auto  token    = cancelled;
 
-    std::thread([cfg, prompt = prompt, systemContext = systemContext, cb = std::move(callback), busy_, token]() mutable {
+    std::thread([cfg, messages = messages, cb = std::move(callback), busy_, token]() mutable {
         juce::String result;
         try {
             // Parse URL into components
@@ -64,14 +63,14 @@ bool RepenteClient::send(juce::String const& prompt,
 
             std::string endpoint = (pathPrefix + "/v1/chat/completions").toStdString();
 
-            json messages = json::array();
-            if (systemContext.isNotEmpty())
-                messages.push_back({{"role", "system"}, {"content", systemContext.toStdString()}});
-            messages.push_back({{"role", "user"}, {"content", prompt.toStdString()}});
+            json messages_json = json::array();
+            for (auto const& m : messages)
+                messages_json.push_back({{"role",    m.role.toStdString()},
+                                         {"content", m.content.toStdString()}});
 
             json body = {
                 {"model",    cfg.model.toStdString()},
-                {"messages", messages},
+                {"messages", messages_json},
                 {"stream",   false}
             };
             std::string bodyStr = body.dump();
