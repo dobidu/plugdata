@@ -188,32 +188,32 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
     if (msg.startsWith("/help")) {
         auto topic = msg.substring(5).trim().toLowerCase();
         if (topic.isEmpty()) {
-            pdInstance->logRepente("pd-repente  \xe2\x94\x80\xe2\x94\x80  /help <topic> for details");
-            pdInstance->logMessage(
+            pdInstance->logRepente(juce::String::fromUTF8("pd-repente  \xe2\x94\x80\xe2\x94\x80  /help <topic> for details"));
+            pdInstance->logMessage(juce::String::fromUTF8(
                 "  \xe2\x80\xa2 pds       pd-script REPL\n"
                 "  \xe2\x80\xa2 sugar     shorthand syntax\n"
                 "  \xe2\x80\xa2 lua       Lua scripting\n"
                 "  \xe2\x80\xa2 llm       LLM bridge + /analyze\n"
                 "  \xe2\x80\xa2 commands  all /commands\n"
-                "  \xe2\x80\xa2 builtin   plugdata built-ins");
+                "  \xe2\x80\xa2 builtin   plugdata built-ins"));
         } else if (topic == "pds") {
-            pdInstance->logRepente("pd-script REPL  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
-            pdInstance->logMessage(
+            pdInstance->logRepente(juce::String::fromUTF8("pd-script REPL  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
+            pdInstance->logMessage(juce::String::fromUTF8(
                 "  /pds create <type> [x y] [args]  \xe2\x86\x92 create object\n"
                 "  /pds connect <a> <out> <b> <in>  \xe2\x86\x92 connect objects\n"
                 "  /pds delete <name>               \xe2\x86\x92 remove object\n"
                 "  /pds move <name> <x> <y>         \xe2\x86\x92 reposition\n"
-                "  /pds list                        \xe2\x86\x92 list REPL objects");
+                "  /pds list                        \xe2\x86\x92 list REPL objects"));
         } else if (topic == "sugar") {
-            pdInstance->logRepente("Sugar syntax  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
-            pdInstance->logMessage(
+            pdInstance->logRepente(juce::String::fromUTF8("Sugar syntax  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
+            pdInstance->logMessage(juce::String::fromUTF8(
                 "  @type [args]    \xe2\x86\x92 /pds create type [args]\n"
                 "  ~type [args]    \xe2\x86\x92 /pds create type~ [args]\n"
                 "  -> type [args]  \xe2\x86\x92 create + auto-connect from last object\n"
-                "  $last           \xe2\x86\x92 expands to last created object name");
+                "  $last           \xe2\x86\x92 expands to last created object name"));
         } else if (topic == "lua") {
-            pdInstance->logRepente("Lua scripting  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
-            pdInstance->logMessage(
+            pdInstance->logRepente(juce::String::fromUTF8("Lua scripting  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
+            pdInstance->logMessage(juce::String::fromUTF8(
                 "  Wrap in { }:  { math.random() * 440 }\n"
                 "  Multi-line:   open { + Enter, close } to run\n"
                 "\n"
@@ -223,10 +223,10 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  pds.move(name, x, y)\n"
                 "  pds.list()\n"
                 "  pd.post(msg)          \xe2\x86\x92 log to console\n"
-                "  pd.eval(cmd)          \xe2\x86\x92 run any REPL command");
+                "  pd.eval(cmd)          \xe2\x86\x92 run any REPL command"));
         } else if (topic == "llm") {
-            pdInstance->logRepente("LLM bridge  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
-            pdInstance->logMessage(
+            pdInstance->logRepente(juce::String::fromUTF8("LLM bridge  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
+            pdInstance->logMessage(juce::String::fromUTF8(
                 "  /config url <url>           \xe2\x86\x92 set server (OpenAI-compat)\n"
                 "  /config model <name>        \xe2\x86\x92 set model (gpt-4o, repente-1, \xe2\x80\xa6)\n"
                 "  /config key <key>           \xe2\x86\x92 set API key (stored)\n"
@@ -240,10 +240,10 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  /history clear       \xe2\x86\x92 wipe conversation history\n"
                 "  <free text>          \xe2\x86\x92 generate patch (auto-detected + executed)\n"
                 "\n"
-                "  Default: http://localhost:7860  \xe2\x80\xa2  settings persist");
+                "  Default: http://localhost:7860  \xe2\x80\xa2  settings persist"));
         } else if (topic == "commands") {
-            pdInstance->logRepente("Commands  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
-            pdInstance->logMessage(
+            pdInstance->logRepente(juce::String::fromUTF8("Commands  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
+            pdInstance->logMessage(juce::String::fromUTF8(
                 "  /pds <cmd>       \xe2\x86\x92 pd-script  (/help pds)\n"
                 "  /lua <expr>      \xe2\x86\x92 Lua inline  (/help lua)\n"
                 "  /analyze <q>     \xe2\x86\x92 ask LLM, no execution\n"
@@ -253,9 +253,9 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  /canvas          \xe2\x86\x92 print canvas state (debug)\n"
                 "  /help [topic]    \xe2\x86\x92 this help\n"
                 "  /clear           \xe2\x86\x92 clear console\n"
-                "  <free text>      \xe2\x86\x92 send to LLM bridge");
+                "  <free text>      \xe2\x86\x92 send to LLM bridge"));
         } else if (topic == "builtin") {
-            pdInstance->logRepente("Built-in REPL  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
+            pdInstance->logRepente(juce::String::fromUTF8("Built-in REPL  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
             pdInstance->logMessage(
                 "  sel <id>        select object\n"
                 "  deselect / >    deselect all\n"
@@ -269,8 +269,8 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  { expr }        evaluate Lua\n"
                 "  <id> > <msg>    send message to named object");
         } else {
-            pdInstance->logMessage("unknown topic: " + topic
-                + "\n  \xe2\x80\xa2 pds  \xe2\x80\xa2 sugar  \xe2\x80\xa2 lua  \xe2\x80\xa2 llm  \xe2\x80\xa2 commands  \xe2\x80\xa2 builtin");
+            pdInstance->logMessage(juce::String::fromUTF8("unknown topic: ") + topic
+                + juce::String::fromUTF8("\n  \xe2\x80\xa2 pds  \xe2\x80\xa2 sugar  \xe2\x80\xa2 lua  \xe2\x80\xa2 llm  \xe2\x80\xa2 commands  \xe2\x80\xa2 builtin"));
         }
         return {};
     }
@@ -350,7 +350,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 cfg.url = newUrl;
                 bridge->setConfig(std::move(cfg));
             }
-            pdInstance->logRepente("repente: url \xe2\x86\x92 " + newUrl);
+            pdInstance->logRepente(juce::String::fromUTF8("repente: url \xe2\x86\x92 ") + newUrl);
             return {};
         }
 
@@ -363,7 +363,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 cfg.model = newModel;
                 bridge->setConfig(std::move(cfg));
             }
-            pdInstance->logRepente("repente: model \xe2\x86\x92 " + newModel);
+            pdInstance->logRepente(juce::String::fromUTF8("repente: model \xe2\x86\x92 ") + newModel);
             return {};
         }
 
@@ -389,9 +389,9 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             pdInstance->logRepente("repente: testing " + url + "...");
             bridge->ping([pd = pdInstance](bool ok, juce::String const& msg) {
                 if (ok)
-                    pd->logRepente("repente: connected \xe2\x80\x94 " + msg);
+                    pd->logRepente(juce::String::fromUTF8("repente: connected \xe2\x80\x94 ") + msg);
                 else
-                    pd->logError("repente: connection failed \xe2\x80\x94 " + msg);
+                    pd->logError(juce::String::fromUTF8("repente: connection failed \xe2\x80\x94 ") + msg);
             });
             return {};
         }
@@ -414,7 +414,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             return {};
         }
 
-        pdInstance->logMessage(
+        pdInstance->logMessage(juce::String::fromUTF8(
             "usage:\n"
             "  /config                     \xe2\x86\x92 show current config\n"
             "  /config url <url>           \xe2\x86\x92 set server URL\n"
@@ -422,7 +422,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             "  /config key <key>           \xe2\x86\x92 set API key\n"
             "  /config history on|off      \xe2\x86\x92 persist history across sessions\n"
             "  /config autoplace on|off    \xe2\x86\x92 cursor placement (off = use LLM coords)\n"
-            "  /config test                \xe2\x86\x92 test server connection");
+            "  /config test                \xe2\x86\x92 test server connection"));
         return {};
     }
 
