@@ -40,26 +40,29 @@ void Executor::setCanvas(Canvas* newCanvas)
     if (canvas == newCanvas) return;
 
     if (canvas != nullptr)
-        canvasStates[canvas] = { registry, nextId }; // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+        canvasStates[canvas] = { registry, nextId, placementCursor }; // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
 
     canvas = newCanvas;
 
     if (canvas != nullptr) {
         auto it = canvasStates.find(canvas);
         if (it != canvasStates.end()) {
-            registry = it->second.registry;
-            nextId   = it->second.nextId;
+            registry        = it->second.registry;
+            nextId          = it->second.nextId;
+            placementCursor = it->second.placementCursor;
             fprintf(stderr, "Executor::setCanvas → %p (restored %zu objects)\n",
                     static_cast<void*>(canvas), registry.size());
         } else {
             registry.clear();
-            nextId = 1;
+            nextId          = 1;
+            placementCursor = {50, 50};
             fprintf(stderr, "Executor::setCanvas → %p (new canvas)\n",
                     static_cast<void*>(canvas));
         }
     } else {
         registry.clear();
-        nextId = 1;
+        nextId          = 1;
+        placementCursor = {50, 50};
     }
 }
 
@@ -77,6 +80,17 @@ juce::String Executor::executeSync(CommandResult const& cmd)
     juce::String result;
     execute(cmd, [&result](juce::String const& r) { result = r; });
     return result;
+}
+
+juce::Point<int> Executor::nextAutoPosition()
+{
+    auto pos = placementCursor;
+    placementCursor.x += 90;
+    if (placementCursor.x > 700) {
+        placementCursor.x = 50;
+        placementCursor.y += 60;
+    }
+    return pos;
 }
 
 juce::String Executor::getLastCreatedName() const
@@ -120,8 +134,16 @@ void Executor::execute(CommandResult const& cmd,
                 return;
             }
             juce::String objText = cmd.args[0];
-            int x = cmd.args.size() > 1 ? cmd.args[1].getIntValue() : 100;
-            int y = cmd.args.size() > 2 ? cmd.args[2].getIntValue() : 100;
+            bool const hasExplicitCoords = (cmd.args.size() > 2);
+            int x, y;
+            if (hasExplicitCoords) {
+                x = cmd.args[1].getIntValue();
+                y = cmd.args[2].getIntValue();
+            } else {
+                auto pos = nextAutoPosition();
+                x = pos.x;
+                y = pos.y;
+            }
 
             t_gobj* obj = canvas->patch.createObject(x, y, objText);
             if (obj == nullptr)
@@ -131,6 +153,13 @@ void Executor::execute(CommandResult const& cmd,
             }
             juce::String name = assignName(obj, objText);
             canvas->synchronise();
+
+            // Snap to grid via ObjectGrid after synchronise (Object* now exists)
+            Object* lastObj = nullptr;
+            for (auto* o : canvas->objects) lastObj = o;
+            if (lastObj)
+                canvas->objectGrid.positionNewObject(lastObj, juce::Point<int>(x, y));
+
             if (onResult) onResult("created " + name + ctx());
             break;
         }

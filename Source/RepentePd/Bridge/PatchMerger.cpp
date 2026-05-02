@@ -28,16 +28,14 @@ void PatchMerger::merge(juce::String const& patchContent, PluginEditor* editor)
         auto tokens = juce::StringArray::fromTokens(line, " ", "");
 
         if (tokens.size() >= 5 && tokens[0] == "#X" && tokens[1] == "obj") {
-            int const x = tokens[2].getIntValue();
-            int const y = tokens[3].getIntValue();
             juce::String type = tokens[4];
             juce::String args;
             for (int i = 5; i < tokens.size(); ++i)
                 args += (i > 5 ? " " : "") + tokens[i];
 
+            // Omit LLM coordinates — Executor auto-placement handles positioning
             juce::String const cmd = "/pds create " + type
-                + (args.isNotEmpty() ? " " + args : "")
-                + " " + juce::String(x) + " " + juce::String(y);
+                + (args.isNotEmpty() ? " " + args : "");
 
             juce::String const prevName = ex->getLastCreatedName();
             auto const result = ex->executeSync(CommandParser::parse(cmd));

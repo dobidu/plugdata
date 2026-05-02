@@ -62,11 +62,14 @@ private:
     struct CanvasState {
         std::map<juce::String, ObjectEntry> registry;
         int nextId = 1;
+        juce::Point<int> placementCursor = {50, 50};
     };
     std::map<Canvas*, CanvasState> canvasStates;
     std::map<juce::String, ObjectEntry> registry;
     int nextId = 1;
+    juce::Point<int> placementCursor = {50, 50};
 
+    juce::Point<int> nextAutoPosition();
     juce::String  assignName(void* ptr, juce::String const& text);
     [[nodiscard]] void* resolve(juce::String const& name) const;
 
