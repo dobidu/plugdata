@@ -3,23 +3,23 @@
 ## Loop Position
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete — ready for next PLAN]
+  ✓        ○        ○     [Plan created — awaiting approval]
 ```
 
 ## Active Milestone
 Milestone 1: MVP
 
 ## Active Phase
-03-repente-bridge (Plan 1 of 3 complete)
+03-repente-bridge (Plan 2 of 3)
 
 ## Active Plan
-None — ready for /paul:plan 03-repente-bridge/03-02
+03-02-PLAN.md — PdParser + Bridge + PromptInput free-text wiring
 
 ## Last Action
-2026-05-01 — 03-01 unified (RepenteClient + deps)
+2026-05-01 — 03-02-PLAN.md created
 
 ## Next Action
-/paul:plan 03-repente-bridge/03-02
+Review plan, then /paul:apply 03-repente-bridge/03-02
 
 ## Progress
 - Milestone 1 (MVP): 2/3 phases complete (~67%)
@@ -28,9 +28,9 @@ None — ready for /paul:plan 03-repente-bridge/03-02
 
 ## Session Continuity
 Last session: 2026-05-01
-Stopped at: 03-01 complete — RepenteClient + deps shipped
-Next action: /paul:plan 03-repente-bridge/03-02
-Resume file: .paul/phases/03-repente-bridge/03-01-SUMMARY.md
+Stopped at: 03-02-PLAN.md created — awaiting approval
+Next action: /paul:apply 03-repente-bridge/03-02
+Resume file: .paul/phases/03-repente-bridge/03-02-PLAN.md
 
 ## Open Items
 - ffmpeg `build_ffmpeg.sh` 10.9→10.13 patch: must commit to pd-else submodule for macOS CI
