@@ -30,89 +30,80 @@ plugdata is a plugin wrapper for Pure Data, featuring a new GUI made with JUCE. 
 
 ## pd-repente
 
-> **This fork adds pd-repente** — a scripting REPL and LLM bridge that lets you build Pure Data patches by typing commands or describing what you want to hear.
+> **This fork adds pd-repente** — describe what you want to hear. A working Pure Data patch appears on the canvas and plays immediately.
+
+[![CI](https://github.com/dobidu/plugdata/actions/workflows/cmake.yml/badge.svg)](https://github.com/dobidu/plugdata/actions)
 
 ### What it is
 
-pd-repente embeds a prompt bar directly into the plugdata interface. You can type `pd-script` commands to create, connect, move, and delete objects on the active canvas — or (once the LLM bridge is ready) describe a patch in plain language and have it generated for you.
+pd-repente embeds a prompt bar directly into plugdata. Type a musical idea in plain language — "a filtered noise burst with slow attack" — and a valid Pure Data patch is generated, placed on the canvas, and starts running. No switching windows, no copy-pasting.
 
-The project is a local-first composition assistant: the LLM runs as an external HTTP server (compatible with the OpenAI API), so it can be an Ollama model on your machine, a remote Repente server, or any OpenAI-compatible endpoint.
+The LLM is context-aware: every request includes the current canvas state as a system message, so the model knows what is already on the canvas. Conversation history is maintained across turns — say "now add reverb" and it knows what "it" refers to. History persists across restarts.
 
-### Current state (Phase 02 — pd-script REPL)
+pd-repente is **local-first**: works with any OpenAI-compatible server — Ollama, llama-server, LM Studio, or the OpenAI API — and defaults to `localhost`.
 
-The REPL is functional. The prompt bar is visible at the bottom of every canvas. All commands execute on the audio-message thread safely — the audio thread is never touched.
+### Features
 
-#### Prompt bar commands
+- **Natural language → patch** — free text → LLM → pd patch, pds commands, or Lua, auto-detected and executed
+- **Context-aware + multi-turn** — canvas injected as system message; prior exchanges included each turn
+- **Analysis mode** — `/analyze <question>` asks the LLM about the patch; nothing executed
+- **Merge mode** — toggle in prompt bar; generated patches merge into current canvas instead of new tab
+- **pd-script REPL** — `/pds create / connect / delete / move / list` directly manipulate canvas objects
+- **Sugar syntax** — `@osc~`, `~filter~`, `-> dac~`, `$last` shortcuts
+- **Lua scripting** — `{ }` blocks run inline Lua with full `pds.*` API
+- **Object Tree Panel** — sidebar shows all canvas objects grouped by type (DSP / UI / Control)
+- **Persistent config** — LLM URL, model, API key, merge mode, and conversation history stored across restarts
 
-| Command | Action |
-|---|---|
-| `/pds create <type> [x y] [args…]` | Create a pd object on the active canvas |
-| `/pds connect <name1> <out> <name2> <in>` | Connect two named objects |
-| `/pds delete <name>` | Remove a named object |
-| `/pds move <name> <x> <y>` | Move a named object |
-| `/pds list` | List all REPL-created objects in the console |
-| `/help` | Show available commands |
-| `/clear` | Clear the console output |
+### Quick start
 
-#### Sugar syntax
-
-Shorter forms expand before execution:
-
-| Sugar | Expands to |
-|---|---|
-| `@type [args…]` | `/pds create type [args…]` |
-| `~type [args…]` | `/pds create type~ [args…]` (DSP shorthand) |
-
-**Examples:**
-
-```
-@osc~ 440          →  /pds create osc~ 440
-~dac               →  /pds create dac~
-@connect obj_1 0 obj_2 0
+```bash
+git clone --recursive https://github.com/dobidu/plugdata.git
+cd plugdata
+cmake -S . -B build -G Ninja
+cmake --build build --target plugdata_standalone_Standalone -j$(nproc)
 ```
 
-#### Objects sidebar panel
+Connect an LLM:
 
-The sidebar has an **Objects** tab (`:` icon) that shows every REPL-created object on the active canvas, grouped by type:
+```
+/config url http://localhost:11434    # Ollama running locally
+/config model llama3.2
+/config test                          # verify connection
+```
 
-- **DSP** — objects whose name ends with `~` (signal-rate)
-- **UI** — bng, tgl, hsl, vsl, hradio, vradio, nbx, cnv, vu, floatatom, symbolatom, listbox
-- **Control** — everything else
+Make sound:
 
-The panel refreshes automatically after every REPL command.
+```
+make a sine wave at 440 Hz connected to output
+```
+
+A patch with `osc~ 440` → `dac~` appears and plays.
+
+### Command reference
+
+| Command | Description |
+|---|---|
+| `<free text>` | Send to LLM; canvas state + history injected automatically |
+| `/analyze <question>` | Ask LLM about the patch — text only, no execution |
+| `/history` | Show conversation turn count |
+| `/history clear` | Wipe conversation history |
+| `/pds <cmd>` | pd-script REPL (create / connect / delete / move / list) |
+| `/config` | Show / set LLM settings (url / model / key / test) |
+| `/canvas` | Print serialized canvas state (debug) |
+| `/help [topic]` | Help topics: `pds` · `sugar` · `lua` · `llm` · `commands` · `builtin` |
+| `/clear` | Clear console |
 
 ### Roadmap
 
 | Phase | Status | Description |
 |---|---|---|
 | 01 — Foundation | ✓ Done | CI matrix (Win/Mac/Linux), PromptBar, baseline tests |
-| 02 — pd-script REPL | In progress | REPL engine, DirectCommands, ObjectTreePanel, Lua+pds API |
-| 03 — Repente Bridge | Planned | HTTP/SSE client, natural-language → patch, `/config` panel |
-| 04 — Bidirectionality | Planned | Full canvas scan, context injection, Analysis mode |
-| 05 — V1.0 Polish | Planned | Ollama auto-detect, first-launch wizard, public release |
+| 02 — pd-script REPL | ✓ Done | REPL engine, sugar syntax, ObjectTreePanel, Lua+pds API |
+| 03 — Repente Bridge | ✓ Done | HTTP client, LLM → patch, /config, SettingsFile persistence |
+| 04 — Bidirectionality | In progress | Canvas context injection, /analyze, merge mode, multi-turn history |
+| 05 — V1.0 Polish | Planned | Auto-layout, clickable object tree, Ollama auto-detect, public release |
 
-### Building pd-repente
-
-Same build steps as plugdata (see [Build](#build) below). No extra dependencies for the REPL. The LLM bridge (Phase 03) will add `cpp-httplib` and `nlohmann/json`, both header-only.
-
-```bash
-git clone --recursive https://github.com/BidulaBidu/pd-repente.git
-cd pd-repente
-cmake -S . -B build
-cmake --build build -- -j$(nproc)   # Linux/Mac: nproc / sysctl -n hw.logicalcpu
-```
-
-> **Note:** If you add new `.cpp` files and get linker errors on a machine that already has a build directory, re-run `cmake -S . -B build` to reconfigure before building. CMake uses GLOB for source discovery and the new files won't be picked up otherwise.
-
-### Configuring the LLM server *(Phase 03 — not yet available)*
-
-Once the bridge lands, configuration will live in a `/config` panel inside the sidebar. You will be able to set:
-
-- **Server URL** — any OpenAI-compatible endpoint (default: `http://localhost:11434/v1` for Ollama)
-- **Model name** — detected automatically if the server supports `/models`
-- **Privacy mode** — blocks outbound requests to non-local addresses
-
-Until then, all functionality is purely local (REPL only, no network calls).
+Full feature documentation: [`apps/pd-repente/README.md`](apps/pd-repente/README.md)
 
 ---
 
