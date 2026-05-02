@@ -28,6 +28,7 @@ public:
 
     void setBridge(Bridge* b);
     void resized() override;
+    void paintOverChildren(Graphics& g) override;
 
 protected:
     StringArray const& getHelperCommands() const override { return emptyCommands; }

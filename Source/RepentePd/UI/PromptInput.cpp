@@ -141,22 +141,33 @@ void PromptInput::resized()
 {
     CommandInput::resized();
 
-    // Place toggle between the ">" label and the text field.
-    // After CommandInput::resized(), the TextEditor's left edge is at
-    // consoleTargetLength + 4 — read it directly from the child bounds.
+    // Layout: [toggle] [>] [text field ............] [×]
+    // Toggle at far left; ">" drawn by paintOverChildren at toggle's right edge;
+    // text field pushed right to clear both.
+    constexpr int leftPad = 4;
     constexpr int toggleW = 64;
     constexpr int gap     = 4;
 
     for (auto* child : getChildren()) {
         if (dynamic_cast<juce::TextEditor*>(child)) {
-            int const textX = child->getBounds().getX();
-            int const textY = child->getBounds().getY();
-            int const textH = child->getBounds().getHeight();
-            mergeToggle.setBounds(textX, textY, toggleW, textH);
-            child->setBounds(child->getBounds().withLeft(textX + toggleW + gap));
+            int const newLeft = leftPad + toggleW + gap + consoleTargetLength + gap;
+            child->setBounds(child->getBounds().withLeft(newLeft));
             break;
         }
     }
+
+    mergeToggle.setBounds(leftPad, getHeight() - 30, toggleW, 28);
+}
+
+void PromptInput::paintOverChildren(Graphics& g)
+{
+    // Draw ">" to the right of the merge toggle, suppressing the default left-edge position.
+    g.setColour(PlugDataColours::sidebarTextColour);
+    g.setFont(Fonts::getSemiBoldFont().withHeight(15));
+    g.drawText(consoleTargetName,
+               mergeToggle.getRight() + 4, mergeToggle.getY(),
+               consoleTargetLength, mergeToggle.getHeight(),
+               Justification::centredLeft);
 }
 
 SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdInstance, String msg)

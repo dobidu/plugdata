@@ -903,8 +903,11 @@ private:
     static inline auto luas = UnorderedMap<pd::Instance*, std::unique_ptr<LuaExpressionParser>>();
     LuaExpressionParser* lua;
 
+protected:
     int consoleTargetLength = 10;
     String consoleTargetName = ">";
+
+private:
 
     int currentHistoryIndex = -1;
     static inline std::deque<String> commandHistory;
