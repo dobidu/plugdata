@@ -9,6 +9,7 @@
 #include "RepentePd/Commands/SugarExpander.h"
 #include "RepentePd/Bridge/Bridge.h"
 #include "RepentePd/Bridge/RepenteClient.h"
+#include "RepentePd/Bridge/CanvasSerializer.h"
 #include "Utility/SettingsFile.h"
 extern "C" {
 #include <pd-lua/luas/luajit/src/lua.h>
@@ -184,6 +185,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  /pds <cmd>     -- pd-script (see /help pds)\n"
                 "  /lua <expr>    -- run Lua expression\n"
                 "  /config        -- LLM server config (see /help llm)\n"
+                "  /canvas        -- show serialized canvas state (debug)\n"
                 "  /help [topic]  -- this help\n"
                 "  /clear         -- clear the console\n"
                 "  <free text>    -- send to LLM bridge\n"
@@ -213,6 +215,16 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
     }
     if (msg == "/clear") {
         pluginEditor->clearConsole();
+        return {};
+    }
+
+    if (msg == "/canvas") {
+        if (auto* canvas = pluginEditor ? pluginEditor->getCurrentCanvas() : nullptr) {
+            auto snapshot = RepentePd::CanvasSerializer::serialize(canvas);
+            pdInstance->logMessage(snapshot.isNotEmpty() ? snapshot : "(empty canvas)");
+        } else {
+            pdInstance->logMessage("repente: no active canvas");
+        }
         return {};
     }
 

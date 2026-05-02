@@ -28,7 +28,9 @@ public:
 
     // Fire-and-forget. Callback fires on message thread with response content,
     // or "error: <reason>" on failure. Returns false if client is already busy.
+    // systemContext is injected as role:system if non-empty.
     bool send(juce::String const& prompt,
+              juce::String const& systemContext,
               std::function<void(juce::String)> callback);
 
     // Non-blocking GET /models ping. Fires callback(connected, message) on message thread.

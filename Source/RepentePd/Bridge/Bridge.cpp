@@ -5,6 +5,7 @@
 
 #include "Utility/Config.h"
 #include "Bridge.h"
+#include "RepentePd/Bridge/CanvasSerializer.h"
 #include "RepentePd/UI/PromptInput.h"
 #include "PluginEditor.h"
 
@@ -21,10 +22,14 @@ bool Bridge::send(juce::String const& prompt, std::function<void(bool)> onDone)
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
+    juce::String context;
+    if (auto* canvas = editor ? editor->getCurrentCanvas() : nullptr)
+        context = CanvasSerializer::serialize(canvas);
+
     if (editor && editor->pd)
         editor->pd->logMessage("repente: thinking...");
 
-    return client.send(prompt, [this, onDone](juce::String const& response) {
+    return client.send(prompt, context, [this, onDone](juce::String const& response) {
         jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
         if (response.startsWith("error:")) {
