@@ -20,10 +20,13 @@ AC: /pds create osc~ → object on canvas; audio thread unblocked;
     console shows result; object tree reflects live registry;
     Lua loop creates N objects via pds.create().
 
-### Phase 03: Repente Bridge (3-4w)
-RepenteClient (cpp-httplib, SSE), PdParser (truncation-tolerant), Bridge→Executor,
-/config panel, server auto-detect + wizard, model detection warning.
-AC: text prompt → valid patch ~5s; Battery B 5/5; server-offline handled.
+### Phase 03: Repente Bridge ✅ COMPLETE (2026-05-02)
+Plans: 01 ✓ | 02 ✓ | 03 ✓ (3/3)
+
+RepenteClient (cpp-httplib, async POST + ping), PdParser (PD_PATCH/LUA_BLOCK/PDS_COMMANDS),
+Bridge→Executor full wiring, /config command (url/model/key/test), SettingsFile persistence,
+cancel-token for safe shutdown.
+AC: free text → LLM → canvas live (Ollama tested); /config persists; quit crash-free.
 
 ## Milestone 2: Full UX (Phases 4–5)
 

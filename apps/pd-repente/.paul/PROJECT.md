@@ -40,16 +40,17 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 - ✓ Lua+pds API: pds.create/connect/delete/move/list callable in Lua — Phase 02
 - ✓ /help <topic>: paged help (pds/sugar/lua/llm/commands/builtin) — Phase 02
 - ✓ ObjectTreePanel syncs on GUI-driven object deletion — Phase 02
+- ✓ RepenteClient: async HTTP POST + ping, cancel-token safe shutdown — Phase 03
+- ✓ PdParser: format detection (PD_PATCH / LUA_BLOCK / PDS_COMMANDS) — Phase 03
+- ✓ Bridge: RepenteClient → PdParser → canvas execution — Phase 03
+- ✓ /config command: url/model/key/test; persists via SettingsFile — Phase 03
 
 ## Active Requirements
 
-- [ ] RepenteClient: async HTTP POST to OpenAI-compat endpoint, callback on message thread — Phase 03
-- [ ] LLM response auto-detection: pd patch text → new tab; Lua/pds code → Lua engine; /pds lines → Executor — Phase 03
-- [ ] PdParser: detect response format, write temp .pd file for patch responses, open as new tab — Phase 03
-- [ ] Bridge: connects RepenteClient → PdParser → execution path; wires PromptInput free-text — Phase 03
-- [ ] /config panel: server URL, model, API key, server auto-detect — Phase 03
 - [ ] Canvas serializer for context injection — Phase 04
 - [ ] ObjectTreePanel: full canvas scan (GUI-added + sub-objects) — Phase 04
+- [ ] Ollama auto-detect (localhost:11434) — Phase 05
+- [ ] First-launch wizard + privacy warning for remote URLs — Phase 05
 
 ## Key Decisions
 
@@ -65,6 +66,8 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 | pruneDeletedObjects hooked into Canvas::performSynchronise | 02-04 | Cheapest hook — covers GUI delete, undo, all pd mutations |
 | LLM pd-patch responses open as new tab (not merged) | 03 | Non-destructive; plugdata handles .pd load natively via temp file |
 | LLM response format auto-detected: #N canvas → patch; pds./Lua → Lua engine; /pds lines → Executor | 03 | Single parser handles all response types; no LLM prompt constraints |
+| Cancel token via `shared_ptr<atomic<bool>>` | 03-03 | Detached threads outlive RepenteClient on quit; destructor must safely signal |
+| SettingsFile custom keys must be in defaultSettings map | 03-03 | saveSettings() uses .at(name) — throws out_of_range for unknown keys |
 
 ---
-*Last updated: 2026-05-01 — Phase 03 requirements confirmed*
+*Last updated: 2026-05-02 — Phase 03 complete*
