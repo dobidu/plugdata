@@ -118,7 +118,6 @@ PromptInput::PromptInput(PluginEditor* ed, Executor* ex)
 {
     registerLuaExtension([this](lua_State* L) { registerPdsTable(L); });
 
-    mergeToggle.setClickingTogglesState(true);
     bool const storedMerge = SettingsFile::getInstance()->getProperty<bool>("repente_merge_mode");
     mergeToggle.setToggleState(storedMerge, juce::dontSendNotification);
     mergeToggle.setTooltip("Merge LLM patch into current canvas (no new tab)");
@@ -142,20 +141,22 @@ void PromptInput::resized()
 {
     CommandInput::resized();
 
-    constexpr int clearW  = 30;
-    constexpr int toggleW = 56;
-    constexpr int gap     = 8;
-    constexpr int total   = toggleW + gap; // 64px trimmed from commandInput
+    // Place toggle between the ">" label and the text field.
+    // After CommandInput::resized(), the TextEditor's left edge is at
+    // consoleTargetLength + 4 — read it directly from the child bounds.
+    constexpr int toggleW = 64;
+    constexpr int gap     = 4;
 
     for (auto* child : getChildren()) {
         if (dynamic_cast<juce::TextEditor*>(child)) {
-            child->setBounds(child->getBounds().withTrimmedRight(total));
+            int const textX = child->getBounds().getX();
+            int const textY = child->getBounds().getY();
+            int const textH = child->getBounds().getHeight();
+            mergeToggle.setBounds(textX, textY, toggleW, textH);
+            child->setBounds(child->getBounds().withLeft(textX + toggleW + gap));
             break;
         }
     }
-
-    int const inputY = getHeight() - 30;
-    mergeToggle.setBounds(getWidth() - clearW - gap - toggleW, inputY, toggleW, 28);
 }
 
 SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdInstance, String msg)

@@ -302,7 +302,7 @@ public:
 
     void updateSize(bool animate = false)
     {
-        int const extraHeight = hasInputFocus ? helperRowHeight : 0;
+        int const extraHeight = (hasInputFocus && !helperButtons.isEmpty()) ? helperRowHeight : 0;
         int const newHeight = std::max(commandInput.getTextHeight() + 4, 30) + extraHeight;
 
         auto const fromBounds = getBounds();

@@ -41,12 +41,19 @@ AC: context-aware generation; Battery F completes; object tree shows full patch 
 Plans: 01 · 02 · 03 · 04
 
 **05-01: CanvasLayouter — auto-placement (2 plans)**
-Plan 1 — Grid auto-placement: scan existing object bounding boxes, pack new objects into next
-available ~80px grid cell. Merge mode ignores LLM coordinates; uses CanvasLayouter instead.
-`/pds create osc~` without x/y auto-places. No coordinate arithmetic from user or LLM.
-Plan 2 — Signal-flow layout: topology-aware DAG arrangement (sources top → processors → sinks).
-`/arrange` command reorganizes active canvas. Type classification table (osc~/noise~ = source,
-dac~/throw~ = sink, filter~/reverb~ = processor).
+Existing plugdata infrastructure to reuse:
+  - ObjectGrid::positionNewObject() — snaps new objects (edge/center/grid); used by GUI creation
+  - Canvas::alignObjects(Align) — 8 alignment types (L/R/center/top/bottom/HDistribute/VDistribute)
+  - Canvas::tidySelection() — delegates to pd native tidy; reorganizes selection
+  - duplicateSelection() — overlap-aware offset; avoids stacking on paste
+  - SnapSettings — configurable grid size, edge/center snap modes
+
+Plan 1 — Auto-placement: route Executor create + PatchMerger through ObjectGrid::positionNewObject()
+instead of using raw LLM coordinates or fixed offsets. `/pds create osc~` without x/y picks next
+available slot. Merge mode discards LLM coordinates entirely; layout handled by plugdata's snap system.
+Plan 2 — Signal-flow arrange: topology-aware DAG (sources top → processors → sinks).
+`/arrange` command calls alignObjects + custom sort by connection depth. Type classification table
+(osc~/noise~ = source, dac~/throw~ = sink, filter~/reverb~ = processor). Builds on Plan 1.
 
 **05-02: V1.0 Polish**
 Ollama auto-detect (localhost:11434), first-launch wizard, privacy warning,

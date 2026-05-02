@@ -30,8 +30,8 @@ public:
     void resized() override;
 
 protected:
-    StringArray const& getHelperCommands() const override { return pdsHelperCommands; }
-    StringArray const& getObjectHelperCommands() const override { return pdsHelperCommands; }
+    StringArray const& getHelperCommands() const override { return emptyCommands; }
+    StringArray const& getObjectHelperCommands() const override { return emptyCommands; }
 
 private:
     void registerPdsTable(lua_State* L);
@@ -46,11 +46,12 @@ private:
     Executor*     executor;
     Bridge*       bridge = nullptr;
 
-    juce::TextButton mergeToggle { "merge" };
+    juce::ToggleButton mergeToggle { "merge" };
 
     static inline StringArray const pdsHelperCommands = {
         "/pds create", "/pds connect", "/pds delete", "/pds list", "/pds move"
     };
+    static inline StringArray const emptyCommands = {};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PromptInput)
 };
