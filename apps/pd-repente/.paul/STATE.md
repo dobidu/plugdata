@@ -3,7 +3,7 @@
 ## Loop Position
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Loop complete — ready for next PLAN]
+  ✓        ○        ○     [Plan approved — ready for APPLY]
 ```
 
 ## Active Milestone
@@ -13,13 +13,13 @@ Milestone 2: Full UX
 04-bidirectionality (Plan 1 of 3 complete)
 
 ## Active Plan
-None — 04-01 unified, ready to plan 04-02
+04-02 — Analysis mode (/analyze command)
 
 ## Last Action
-2026-05-02 — 04-01 APPLY complete + UNIFY done
+2026-05-02 — 04-02 PLAN created
 
 ## Next Action
-/paul:plan 04-bidirectionality/04-02 — NOTE: ObjectTreePanel full scan already done (pulled into 04-01). 04-02 scope needs replanning. Candidates: Analysis mode or session persistence.
+/paul:apply 04-bidirectionality/04-02
 
 ## Progress
 - Phase 01: 100% ✅
@@ -29,14 +29,13 @@ None — 04-01 unified, ready to plan 04-02
 
 ## Session Continuity
 Last session: 2026-05-02
-Stopped at: 04-01 UNIFY complete
-Next action: /paul:plan for 04-02 (scope: Analysis mode or session persistence — ObjectTreePanel done)
-Resume file: .paul/phases/04-bidirectionality/04-01-SUMMARY.md
+Stopped at: 04-02 PLAN complete, awaiting APPLY
+Next action: /paul:apply 04-bidirectionality/04-02
+Resume file: .paul/phases/04-bidirectionality/04-02-PLAN.md
 
 ## Open Items
 - ffmpeg `build_ffmpeg.sh` 10.9→10.13 patch: must commit to pd-else submodule for macOS CI
 - canvasStates stale entries on context-menu tab close — benign, will GC on canvas destroy
-- 04-02 scope: ObjectTreePanel full scan was pulled into 04-01 — replanning needed
 - Battery B (5/5 text→canvas→audio tests) — Phase 04+ goal
 - CanvasSerializer doesn't recurse into sub-patches — top-level only for now
 
@@ -51,5 +50,5 @@ Resume file: .paul/phases/04-bidirectionality/04-01-SUMMARY.md
 - CONFIGURE_DEPENDS on cmake source glob — auto-picks new Bridge/*.cpp (Phase 03)
 
 ### Git State
-Last commit: fd83981ad
+Last commit: fd83981ad (04-01 UNIFY)
 Branch: pd-repente-main
