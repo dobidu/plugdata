@@ -55,6 +55,7 @@ void Bridge::execute(ParsedResponse const& parsed)
         {
             if (editor->pd) editor->pd->logMessage("repente: opening patch...");
             editor->getTabComponent().openPatch(parsed.content);
+            editor->refreshObjectsPanel();
             break;
         }
         case ResponseType::LUA_BLOCK:
