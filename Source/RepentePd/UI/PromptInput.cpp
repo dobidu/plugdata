@@ -8,6 +8,8 @@
 #include "RepentePd/Commands/CommandParser.h"
 #include "RepentePd/Commands/SugarExpander.h"
 #include "RepentePd/Bridge/Bridge.h"
+#include "RepentePd/Bridge/RepenteClient.h"
+#include "Utility/SettingsFile.h"
 extern "C" {
 #include <pd-lua/luas/luajit/src/lua.h>
 #include <pd-lua/luas/luajit/src/lauxlib.h>
@@ -166,17 +168,25 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  for i=1,4 do pds.create(\"osc~\", i*80, 100) end");
         } else if (topic == "llm") {
             pdInstance->logMessage(
-                "LLM bridge -- Phase 03 (not yet available)\n"
-                "Free-text input will send prompts to a Repente/OpenAI-compat server.\n"
-                "Configure server URL and model in /config panel (Phase 03).");
+                "LLM bridge -- configure with /config, then type free text.\n"
+                "\n"
+                "  /config               -- show current settings\n"
+                "  /config url <url>     -- set server URL (OpenAI-compat)\n"
+                "  /config model <name>  -- set model (e.g. gpt-4o, repente-1)\n"
+                "  /config key <key>     -- set API key (stored in settings)\n"
+                "  /config test          -- ping server for connectivity\n"
+                "\n"
+                "Default URL: http://localhost:7860 (Repente local server)\n"
+                "Settings persist across restarts.");
         } else if (topic == "commands") {
             pdInstance->logMessage(
                 "pd-repente commands:\n"
                 "  /pds <cmd>     -- pd-script (see /help pds)\n"
                 "  /lua <expr>    -- run Lua expression\n"
+                "  /config        -- LLM server config (see /help llm)\n"
                 "  /help [topic]  -- this help\n"
                 "  /clear         -- clear the console\n"
-                "  <free text>    -- send to LLM (Phase 03)\n"
+                "  <free text>    -- send to LLM bridge\n"
                 "\n"
                 "Shorthand sugar: see /help sugar\n"
                 "Lua + pds API:   see /help lua\n"
@@ -203,6 +213,83 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
     }
     if (msg == "/clear") {
         pluginEditor->clearConsole();
+        return {};
+    }
+
+    if (msg.startsWith("/config")) {
+        auto args = msg.substring(7).trim();
+
+        if (args.isEmpty()) {
+            auto const& cfg = bridge ? bridge->getConfig()
+                                     : RepentePd::RepenteClient::Config{};
+            juce::String masked = cfg.apiKey.isNotEmpty() ? "****" : "(not set)";
+            pdInstance->logMessage(
+                "repente config:\n"
+                "  url:   " + cfg.url + "\n"
+                "  model: " + cfg.model + "\n"
+                "  key:   " + masked);
+            return {};
+        }
+
+        if (args.startsWith("url ")) {
+            juce::String newUrl = args.substring(4).trim();
+            SettingsFile::getInstance()->setProperty("repente_url", newUrl);
+            if (bridge) {
+                auto cfg = bridge->getConfig();
+                cfg.url = newUrl;
+                bridge->setConfig(std::move(cfg));
+            }
+            pdInstance->logMessage("repente: url set to " + newUrl);
+            return {};
+        }
+
+        if (args.startsWith("model ")) {
+            juce::String newModel = args.substring(6).trim();
+            SettingsFile::getInstance()->setProperty("repente_model", newModel);
+            if (bridge) {
+                auto cfg = bridge->getConfig();
+                cfg.model = newModel;
+                bridge->setConfig(std::move(cfg));
+            }
+            pdInstance->logMessage("repente: model set to " + newModel);
+            return {};
+        }
+
+        if (args.startsWith("key ")) {
+            juce::String newKey = args.substring(4).trim();
+            SettingsFile::getInstance()->setProperty("repente_key", newKey);
+            if (bridge) {
+                auto cfg = bridge->getConfig();
+                cfg.apiKey = newKey;
+                bridge->setConfig(std::move(cfg));
+            }
+            pdInstance->logMessage("repente: api key set (masked)");
+            return {};
+        }
+
+        if (args == "test") {
+            if (!bridge) {
+                pdInstance->logMessage("repente: bridge not ready");
+                return {};
+            }
+            auto url = bridge->getConfig().url;
+            pdInstance->logMessage("repente: testing " + url + "...");
+            bridge->ping([pd = pdInstance](bool ok, juce::String const& msg) {
+                if (ok)
+                    pd->logMessage("repente: connected -- " + msg);
+                else
+                    pd->logMessage("repente: connection failed -- " + msg);
+            });
+            return {};
+        }
+
+        pdInstance->logMessage(
+            "usage:\n"
+            "  /config              -- show current config\n"
+            "  /config url <url>    -- set server URL\n"
+            "  /config model <name> -- set model name\n"
+            "  /config key <key>    -- set API key\n"
+            "  /config test         -- test server connection");
         return {};
     }
 
