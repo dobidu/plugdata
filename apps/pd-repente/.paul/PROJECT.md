@@ -44,11 +44,17 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 - ✓ PdParser: format detection (PD_PATCH / LUA_BLOCK / PDS_COMMANDS) — Phase 03
 - ✓ Bridge: RepenteClient → PdParser → canvas execution — Phase 03
 - ✓ /config command: url/model/key/test; persists via SettingsFile — Phase 03
+- ✓ CanvasSerializer: canvas → pd-file format for LLM context injection — Phase 04
+- ✓ ObjectTreePanel extended: full canvas scan (GUI-added objects) — Phase 04
+- ✓ /analyze mode: LLM query without patch execution — Phase 04
+- ✓ Multi-turn conversation history (20-turn rolling window) — Phase 04
+- ✓ History persistence via SettingsFile (opt-in) — Phase 04
+- ✓ Merge mode: LLM patch merged into current canvas — Phase 04
+- ✓ Console type-3 teal for repente status messages — Phase 04
 
 ## Active Requirements
 
-- [ ] Canvas serializer for context injection — Phase 04
-- [ ] ObjectTreePanel: full canvas scan (GUI-added + sub-objects) — Phase 04
+- [ ] ObjectTreePanel: full canvas scan (GUI-added + sub-objects) — deferred Phase 05+
 - [ ] Ollama auto-detect (localhost:11434) — Phase 05
 - [ ] First-launch wizard + privacy warning for remote URLs — Phase 05
 
@@ -68,6 +74,11 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 | LLM response format auto-detected: #N canvas → patch; pds./Lua → Lua engine; /pds lines → Executor | 03 | Single parser handles all response types; no LLM prompt constraints |
 | Cancel token via `shared_ptr<atomic<bool>>` | 03-03 | Detached threads outlive RepenteClient on quit; destructor must safely signal |
 | SettingsFile custom keys must be in defaultSettings map | 03-03 | saveSettings() uses .at(name) — throws out_of_range for unknown keys |
+| Canvas serialized to pd-file format (not JSON) | 04-01 | Native LLM format; pd-file is self-documenting for the model |
+| ObjectTreePanel uses Canvas as source of truth | 04-01 | Executor overlays REPL names; full scan shows GUI-added objects too |
+| Bridge owns message construction; RepenteClient is transport-only | 04-03 | Clean separation; no history logic leaks into HTTP layer |
+| History persistence off by default; opt-in via /config history on | 04-03 | Avoids silent accumulation; user controls privacy |
+| JUCE JSON (DynamicObject) for history serialization | 04-03 | No new dep; nlohmann/json include chain not clean in Bridge.cpp |
 
 ---
-*Last updated: 2026-05-02 — Phase 03 complete*
+*Last updated: 2026-05-02 — Phase 04 complete*

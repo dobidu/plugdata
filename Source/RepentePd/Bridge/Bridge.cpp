@@ -128,12 +128,16 @@ int Bridge::historyTurnCount() const
 
 void Bridge::saveHistory() const
 {
+    if (!SettingsFile::getInstance()->getProperty<bool>("repente_persist_history"))
+        return;
     SettingsFile::getInstance()->setProperty("repente_history", serializeHistory(conversationHistory));
     SettingsFile::getInstance()->saveSettings();
 }
 
 void Bridge::loadHistory()
 {
+    if (!SettingsFile::getInstance()->getProperty<bool>("repente_persist_history"))
+        return;
     auto str = SettingsFile::getInstance()->getProperty<juce::String>("repente_history");
     if (str.isNotEmpty())
         conversationHistory = deserializeHistory(str);

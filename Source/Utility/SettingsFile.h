@@ -186,6 +186,7 @@ private:
         { "repente_model", var("repente-1") },
         { "repente_key", var("") },
         { "repente_merge_mode", var(false) },
+        { "repente_persist_history", var(false) },
         { "repente_history", var("") },
     };
 

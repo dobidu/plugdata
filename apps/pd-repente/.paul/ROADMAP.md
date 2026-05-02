@@ -30,12 +30,15 @@ AC: free text → LLM → canvas live (Ollama tested); /config persists; quit cr
 
 ## Milestone 2: Full UX (Phases 4–5)
 
-### Phase 04: Bidirectionality + Analysis (2-3w)
-Canvas serializer (subgraph default/full optional), context injection, Analysis mode,
-session persistence (~/.repente-pd/), /canvas, /sessions.
-ObjectTreePanel extended: scan ALL canvas objects (REPL-named + GUI-added + sub-patch objects);
-unnamed objects shown read-only as [type]; composed objects/abstractions expandable one level.
-AC: context-aware generation; Battery F completes; object tree shows full patch state.
+### Phase 04: Bidirectionality + Analysis ✅ COMPLETE (2026-05-02)
+Plans: 01 ✓ | 02 ✓ | 03 ✓ (3/3)
+
+CanvasSerializer (pd-file format, top-level objects), context injection per-request,
+/analyze mode (LLM query without execution), merge mode (LLM patch merged into canvas),
+console type-3 teal for repente status, multi-turn conversation history (20-turn rolling),
+history persistence opt-in (/config history on|off), /history + /history clear commands,
+/config expanded (history, merge), startup focus on prompt bar.
+AC: context-aware generation; multi-turn iterative builds; /analyze text-only; history survives restart.
 
 ### Phase 05: Tier 2 + V1.0 Polish (3-4w)
 Plans: 01 · 02 · 03 · 04
