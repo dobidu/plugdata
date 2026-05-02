@@ -28,21 +28,24 @@ bool Bridge::send(juce::String const& prompt, bool analyzeOnly, std::function<vo
         context = CanvasSerializer::serialize(canvas);
 
     if (editor && editor->pd)
-        editor->pd->logMessage(analyzeOnly ? "repente: analyzing..." : "repente: thinking...");
+        editor->pd->logRepente(analyzeOnly ? "repente: analyzing..." : "repente: thinking...");
 
     return client.send(prompt, context, [this, analyzeOnly, onDone](juce::String const& response) {
         jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
         if (response.startsWith("error:")) {
             if (editor && editor->pd)
-                editor->pd->logMessage(response);
+                editor->pd->logError(response);
             if (onDone) onDone(false);
             return;
         }
 
         if (analyzeOnly) {
-            if (editor && editor->pd)
+            if (editor && editor->pd) {
+                editor->pd->logRepente(String::fromUTF8("\xe2\x94\x80\xe2\x94\x80 analysis \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
                 editor->pd->logMessage(response);
+                editor->pd->logRepente(String::fromUTF8("\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
+            }
             if (onDone) onDone(true);
             return;
         }
@@ -62,10 +65,10 @@ void Bridge::execute(ParsedResponse const& parsed)
         case ResponseType::PD_PATCH:
         {
             if (mergeMode) {
-                if (editor->pd) editor->pd->logMessage("repente: merging patch...");
+                if (editor->pd) editor->pd->logRepente("repente: merging patch...");
                 PatchMerger::merge(parsed.content, editor);
             } else {
-                if (editor->pd) editor->pd->logMessage("repente: opening patch...");
+                if (editor->pd) editor->pd->logRepente("repente: opening patch...");
                 editor->getTabComponent().openPatch(parsed.content);
                 editor->refreshObjectsPanel();
             }
@@ -73,14 +76,14 @@ void Bridge::execute(ParsedResponse const& parsed)
         }
         case ResponseType::LUA_BLOCK:
         {
-            if (editor->pd) editor->pd->logMessage("repente: running Lua...");
+            if (editor->pd) editor->pd->logRepente("repente: running Lua...");
             if (auto* pi = editor->getPromptInput())
                 pi->executeCommand(editor->pd, "{" + parsed.content + "}");
             break;
         }
         case ResponseType::PDS_COMMANDS:
         {
-            if (editor->pd) editor->pd->logMessage("repente: executing commands...");
+            if (editor->pd) editor->pd->logRepente("repente: executing commands...");
             if (auto* pi = editor->getPromptInput()) {
                 for (auto const& line : juce::StringArray::fromLines(parsed.content)) {
                     auto trimmed = line.trim();

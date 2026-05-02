@@ -188,91 +188,83 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
     if (msg.startsWith("/help")) {
         auto topic = msg.substring(5).trim().toLowerCase();
         if (topic.isEmpty()) {
+            pdInstance->logRepente("pd-repente  \xe2\x94\x80\xe2\x94\x80  /help <topic> for details");
             pdInstance->logMessage(
-                "pd-repente REPL -- use /help <topic> for details\n"
-                "  topics: pds  sugar  lua  llm  commands  builtin");
+                "  \xe2\x80\xa2 pds       pd-script REPL\n"
+                "  \xe2\x80\xa2 sugar     shorthand syntax\n"
+                "  \xe2\x80\xa2 lua       Lua scripting\n"
+                "  \xe2\x80\xa2 llm       LLM bridge + /analyze\n"
+                "  \xe2\x80\xa2 commands  all /commands\n"
+                "  \xe2\x80\xa2 builtin   plugdata built-ins");
         } else if (topic == "pds") {
+            pdInstance->logRepente("pd-script REPL  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
             pdInstance->logMessage(
-                "/pds create <type> [x y] [args] -- create object on canvas\n"
-                "/pds connect <a> <out> <b> <in> -- connect two objects\n"
-                "/pds delete <name>              -- remove named object\n"
-                "/pds move <name> <x> <y>        -- reposition object\n"
-                "/pds list                       -- list all REPL objects");
+                "  /pds create <type> [x y] [args]  \xe2\x86\x92 create object\n"
+                "  /pds connect <a> <out> <b> <in>  \xe2\x86\x92 connect objects\n"
+                "  /pds delete <name>               \xe2\x86\x92 remove object\n"
+                "  /pds move <name> <x> <y>         \xe2\x86\x92 reposition\n"
+                "  /pds list                        \xe2\x86\x92 list REPL objects");
         } else if (topic == "sugar") {
+            pdInstance->logRepente("Sugar syntax  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
             pdInstance->logMessage(
-                "Sugar syntax (expands before parsing):\n"
-                "  @type [args]    -> /pds create type [args]\n"
-                "  ~type [args]    -> /pds create type~ [args]\n"
-                "  -> type [args]  -> create + auto-connect from last object\n"
-                "  $last           -> expands to last created object name");
+                "  @type [args]    \xe2\x86\x92 /pds create type [args]\n"
+                "  ~type [args]    \xe2\x86\x92 /pds create type~ [args]\n"
+                "  -> type [args]  \xe2\x86\x92 create + auto-connect from last object\n"
+                "  $last           \xe2\x86\x92 expands to last created object name");
         } else if (topic == "lua") {
+            pdInstance->logRepente("Lua scripting  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
             pdInstance->logMessage(
-                "Lua blocks -- wrap in { }:\n"
-                "  { math.random() * 440 }\n"
-                "  { pd.post(\"hello\") }\n"
-                "Multi-line: open { + Enter, close } to run.\n"
+                "  Wrap in { }:  { math.random() * 440 }\n"
+                "  Multi-line:   open { + Enter, close } to run\n"
                 "\n"
-                "pds table (synchronous pd-script from Lua):\n"
-                "  local n = pds.create(\"osc~\", 100, 100)\n"
-                "  local d = pds.create(\"dac~\", 100, 200)\n"
-                "  pds.connect(n, 0, d, 0)\n"
-                "  pds.delete(n)\n"
-                "  pds.move(n, 200, 100)\n"
-                "  pds.list()");
-            pdInstance->logMessage(
-                "pd table (built-in):\n"
-                "  pd.post(msg)     -- log to console\n"
-                "  pd.eval(command) -- run any REPL command string\n"
-                "\n"
-                "Loop example:\n"
-                "  for i=1,4 do pds.create(\"osc~\", i*80, 100) end");
+                "  pds.create(\"osc~\", x, y)   \xe2\x86\x92 create + return name\n"
+                "  pds.connect(a, nout, b, nin)\n"
+                "  pds.delete(name)\n"
+                "  pds.move(name, x, y)\n"
+                "  pds.list()\n"
+                "  pd.post(msg)          \xe2\x86\x92 log to console\n"
+                "  pd.eval(cmd)          \xe2\x86\x92 run any REPL command");
         } else if (topic == "llm") {
+            pdInstance->logRepente("LLM bridge  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
             pdInstance->logMessage(
-                "LLM bridge -- configure with /config, then type free text.\n"
+                "  /config url <url>    \xe2\x86\x92 set server (OpenAI-compat)\n"
+                "  /config model <name> \xe2\x86\x92 set model (gpt-4o, repente-1, \xe2\x80\xa6)\n"
+                "  /config key <key>    \xe2\x86\x92 set API key (stored)\n"
+                "  /config test         \xe2\x86\x92 ping server\n"
+                "  /config              \xe2\x86\x92 show current settings\n"
                 "\n"
-                "  /config               -- show current settings\n"
-                "  /config url <url>     -- set server URL (OpenAI-compat)\n"
-                "  /config model <name>  -- set model (e.g. gpt-4o, repente-1)\n"
-                "  /config key <key>     -- set API key (stored in settings)\n"
-                "  /config test          -- ping server for connectivity\n"
+                "  /analyze <question>  \xe2\x86\x92 ask LLM, text only, no execution\n"
+                "  <free text>          \xe2\x86\x92 generate patch (auto-detected + executed)\n"
                 "\n"
-                "  /analyze <question>   -- ask LLM about patch (text only, no execution)\n"
-                "  <free text>           -- generate patch (pd/Lua/pds executed on arrival)\n"
-                "\n"
-                "Default URL: http://localhost:7860 (Repente local server)\n"
-                "Settings persist across restarts.");
+                "  Default: http://localhost:7860  \xe2\x80\xa2  settings persist");
         } else if (topic == "commands") {
+            pdInstance->logRepente("Commands  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
             pdInstance->logMessage(
-                "pd-repente commands:\n"
-                "  /pds <cmd>       -- pd-script (see /help pds)\n"
-                "  /lua <expr>      -- run Lua expression\n"
-                "  /config          -- LLM server config (see /help llm)\n"
-                "  /analyze <q>     -- ask LLM about patch (text response)\n"
-                "  /canvas          -- show serialized canvas state (debug)\n"
-                "  /help [topic]    -- this help\n"
-                "  /clear           -- clear the console\n"
-                "  <free text>      -- send to LLM bridge\n"
-                "\n"
-                "Shorthand sugar: see /help sugar\n"
-                "Lua + pds API:   see /help lua\n"
-                "Built-in REPL:   see /help builtin");
+                "  /pds <cmd>       \xe2\x86\x92 pd-script  (/help pds)\n"
+                "  /lua <expr>      \xe2\x86\x92 Lua inline  (/help lua)\n"
+                "  /analyze <q>     \xe2\x86\x92 ask LLM, no execution\n"
+                "  /config \xe2\x80\xa6        \xe2\x86\x92 LLM config  (/help llm)\n"
+                "  /canvas          \xe2\x86\x92 print canvas state (debug)\n"
+                "  /help [topic]    \xe2\x86\x92 this help\n"
+                "  /clear           \xe2\x86\x92 clear console\n"
+                "  <free text>      \xe2\x86\x92 send to LLM bridge");
         } else if (topic == "builtin") {
+            pdInstance->logRepente("Built-in REPL  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80");
             pdInstance->logMessage(
-                "Built-in REPL commands (plugdata):\n"
-                "  sel <id>       -- select object by name or index\n"
-                "  deselect / >   -- deselect all\n"
-                "  ls / list      -- list all objects on canvas\n"
-                "  find <id>      -- search objects by name\n"
-                "  canvas <msg>   -- send message to canvas\n"
-                "  pd <msg>       -- send message to pd (e.g. pd dsp 1)\n"
-                "  script <file>  -- run Lua script from search path\n"
-                "  reset          -- reset Lua interpreter state\n"
-                "  man <cmd>      -- show manual for command\n"
-                "  { expr }       -- evaluate Lua expression\n"
-                "  <id> > <msg>   -- send message to named object");
+                "  sel <id>        select object\n"
+                "  deselect / >    deselect all\n"
+                "  ls / list       list all canvas objects\n"
+                "  find <id>       search by name\n"
+                "  canvas <msg>    send message to canvas\n"
+                "  pd <msg>        send message to pd  (pd dsp 1)\n"
+                "  script <file>   run Lua script\n"
+                "  reset           reset Lua state\n"
+                "  man <cmd>       command manual\n"
+                "  { expr }        evaluate Lua\n"
+                "  <id> > <msg>    send message to named object");
         } else {
             pdInstance->logMessage("unknown topic: " + topic
-                + "\navailable: pds  sugar  lua  llm  commands  builtin");
+                + "\n  \xe2\x80\xa2 pds  \xe2\x80\xa2 sugar  \xe2\x80\xa2 lua  \xe2\x80\xa2 llm  \xe2\x80\xa2 commands  \xe2\x80\xa2 builtin");
         }
         return {};
     }
@@ -301,7 +293,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             return {};
         }
         if (!bridge) {
-            pdInstance->logMessage("repente: bridge not ready -- use /config url to set server");
+            pdInstance->logRepente("repente: bridge not ready -- use /config url to set server");
             return {};
         }
         bridge->send(question, /*analyzeOnly=*/true);
@@ -315,8 +307,8 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             auto const& cfg = bridge ? bridge->getConfig()
                                      : RepentePd::RepenteClient::Config{};
             juce::String masked = cfg.apiKey.isNotEmpty() ? "****" : "(not set)";
+            pdInstance->logRepente("repente config");
             pdInstance->logMessage(
-                "repente config:\n"
                 "  url:   " + cfg.url + "\n"
                 "  model: " + cfg.model + "\n"
                 "  key:   " + masked);
@@ -332,7 +324,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 cfg.url = newUrl;
                 bridge->setConfig(std::move(cfg));
             }
-            pdInstance->logMessage("repente: url set to " + newUrl);
+            pdInstance->logRepente("repente: url \xe2\x86\x92 " + newUrl);
             return {};
         }
 
@@ -345,7 +337,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 cfg.model = newModel;
                 bridge->setConfig(std::move(cfg));
             }
-            pdInstance->logMessage("repente: model set to " + newModel);
+            pdInstance->logRepente("repente: model \xe2\x86\x92 " + newModel);
             return {};
         }
 
@@ -358,33 +350,33 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 cfg.apiKey = newKey;
                 bridge->setConfig(std::move(cfg));
             }
-            pdInstance->logMessage("repente: api key set (masked)");
+            pdInstance->logRepente("repente: api key set (masked)");
             return {};
         }
 
         if (args == "test") {
             if (!bridge) {
-                pdInstance->logMessage("repente: bridge not ready");
+                pdInstance->logRepente("repente: bridge not ready");
                 return {};
             }
             auto url = bridge->getConfig().url;
-            pdInstance->logMessage("repente: testing " + url + "...");
+            pdInstance->logRepente("repente: testing " + url + "...");
             bridge->ping([pd = pdInstance](bool ok, juce::String const& msg) {
                 if (ok)
-                    pd->logMessage("repente: connected -- " + msg);
+                    pd->logRepente("repente: connected \xe2\x80\x94 " + msg);
                 else
-                    pd->logMessage("repente: connection failed -- " + msg);
+                    pd->logError("repente: connection failed \xe2\x80\x94 " + msg);
             });
             return {};
         }
 
         pdInstance->logMessage(
             "usage:\n"
-            "  /config              -- show current config\n"
-            "  /config url <url>    -- set server URL\n"
-            "  /config model <name> -- set model name\n"
-            "  /config key <key>    -- set API key\n"
-            "  /config test         -- test server connection");
+            "  /config              \xe2\x86\x92 show current config\n"
+            "  /config url <url>    \xe2\x86\x92 set server URL\n"
+            "  /config model <name> \xe2\x86\x92 set model name\n"
+            "  /config key <key>    \xe2\x86\x92 set API key\n"
+            "  /config test         \xe2\x86\x92 test server connection");
         return {};
     }
 

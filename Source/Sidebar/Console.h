@@ -245,7 +245,7 @@ public:
                 auto& [object, message, type, length, repeats] = console.pd->getConsoleMessages()[idx];
 
                 // Check if message type should be visible
-                if ((type == 0 && !showMessages) || (type == 1 && !showErrors)) {
+                if (((type == 0 || type == 3) && !showMessages) || (type == 1 && !showErrors)) {
                     return;
                 }
 
@@ -259,6 +259,8 @@ public:
                     textColour = Colours::orange;
                 else if (type == 2)
                     textColour = Colours::red;
+                else if (type == 3)
+                    textColour = Colour(0xff40c8c8);
 
                 auto bounds = getLocalBounds().reduced(8, 2);
                 if (repeats > 1) {
@@ -389,7 +391,7 @@ public:
                 auto const numLines = Console::calculateNumLines(message, totalLength, getWidth());
                 auto height = numLines * 13 + 12;
 
-                if ((type == 0 && !showMessages) || (type == 1 && !showErrors))
+                if (((type == 0 || type == 3) && !showMessages) || (type == 1 && !showErrors))
                     continue;
 
                 totalHeight += std::max(0, height);
@@ -432,7 +434,7 @@ public:
                 auto const numLines = Console::calculateNumLines(message, totalLength, getWidth());
                 auto const height = numLines * 13 + 12;
 
-                if ((type == 0 && !showMessages) || (type == 1 && !showErrors))
+                if (((type == 0 || type == 3) && !showMessages) || (type == 1 && !showErrors))
                     continue;
 
                 int const rightMargin = viewport.canScrollVertically() ? 13 : 11;
