@@ -191,6 +191,8 @@ class CommandInput
     , public FocusChangeListener
     , public MarkupDisplay::URLHandler {
 public:
+    void grabInputFocus() { commandInput.grabKeyboardFocus(); }
+
     explicit CommandInput(PluginEditor* editor)
         : editor(editor)
     {

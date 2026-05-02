@@ -284,6 +284,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
     bridge = std::make_unique<RepentePd::Bridge>(this);
     promptInput->setBridge(bridge.get());
+    juce::MessageManager::callAsync([this] { if (promptInput) promptInput->grabInputFocus(); });
 
     {
         auto* sf = SettingsFile::getInstance();
