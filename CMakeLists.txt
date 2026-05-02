@@ -231,7 +231,7 @@ file(GLOB StandaloneBinarySources
     ${CMAKE_CURRENT_SOURCE_DIR}/Resources/Extra/GeneralUser_GS.sf3
     )
 
-file(GLOB plugdata_sources
+file(GLOB plugdata_sources CONFIGURE_DEPENDS
     ${SOURCES_DIRECTORY}/*.h
     ${SOURCES_DIRECTORY}/*.cpp
     ${SOURCES_DIRECTORY}/Utility/*.h
