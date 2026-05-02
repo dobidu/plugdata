@@ -46,7 +46,7 @@ private:
     Executor*     executor;
     Bridge*       bridge = nullptr;
 
-    juce::ToggleButton mergeToggle { "merge" };
+    juce::TextButton mergeToggle { "merge" };
 
     static inline StringArray const pdsHelperCommands = {
         "/pds create", "/pds connect", "/pds delete", "/pds list", "/pds move"

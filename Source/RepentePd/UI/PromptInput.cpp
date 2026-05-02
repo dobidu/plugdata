@@ -118,6 +118,7 @@ PromptInput::PromptInput(PluginEditor* ed, Executor* ex)
 {
     registerLuaExtension([this](lua_State* L) { registerPdsTable(L); });
 
+    mergeToggle.setClickingTogglesState(true);
     bool const storedMerge = SettingsFile::getInstance()->getProperty<bool>("repente_merge_mode");
     mergeToggle.setToggleState(storedMerge, juce::dontSendNotification);
     mergeToggle.setTooltip("Merge LLM patch into current canvas (no new tab)");
@@ -141,16 +142,20 @@ void PromptInput::resized()
 {
     CommandInput::resized();
 
-    // Shrink the TextEditor child to make room for the merge toggle (54px)
+    constexpr int clearW  = 30;
+    constexpr int toggleW = 56;
+    constexpr int gap     = 8;
+    constexpr int total   = toggleW + gap; // 64px trimmed from commandInput
+
     for (auto* child : getChildren()) {
         if (dynamic_cast<juce::TextEditor*>(child)) {
-            child->setBounds(child->getBounds().withTrimmedRight(54));
+            child->setBounds(child->getBounds().withTrimmedRight(total));
             break;
         }
     }
 
-    // Place toggle between text field and the clear button (rightmost 30px)
-    mergeToggle.setBounds(getWidth() - 30 - 54, getHeight() - 30, 50, 30);
+    int const inputY = getHeight() - 30;
+    mergeToggle.setBounds(getWidth() - clearW - gap - toggleW, inputY, toggleW, 28);
 }
 
 SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdInstance, String msg)
