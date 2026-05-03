@@ -209,6 +209,8 @@ void ObjectTreePanel::paint(juce::Graphics& g)
 {
     g.fillAll(PlugDataColours::panelBackgroundColour);
 
+    auto const& lf        = getLookAndFeel();
+    auto const activeCol  = lf.findColour(PlugDataColour::toolbarActiveColourId);
     auto const font       = juce::Font(juce::FontOptions(12.0f));
     auto const headerFont = juce::Font(juce::FontOptions(12.0f, juce::Font::bold));
     int y = 4;
@@ -221,16 +223,16 @@ void ObjectTreePanel::paint(juce::Graphics& g)
         bool const isSelected = (i == selectedRowIndex && !isHeader);
 
         if (isSelected) {
-            g.setColour(PlugDataColours::sidebarActiveBackgroundColour);
+            g.setColour(activeCol.withAlpha(0.35f));
             g.fillRect(0, y, getWidth(), lineH);
-            g.setColour(PlugDataColours::toolbarActiveColour);
-            g.fillRect(0, y, 2, lineH);
+            g.setColour(activeCol);
+            g.fillRect(0, y, 3, lineH);
         }
 
         bool const useBold = isHeader || isSelected;
         g.setFont(useBold ? headerFont : font);
-        g.setColour(isHeader ? PlugDataColours::toolbarActiveColour
-                             : PlugDataColours::toolbarTextColour);
+        g.setColour((isSelected || isHeader) ? activeCol
+                                             : PlugDataColours::toolbarTextColour);
         g.drawText(line, 8, y, getWidth() - 16, lineH,
                    juce::Justification::centredLeft, true);
         y += lineH;
