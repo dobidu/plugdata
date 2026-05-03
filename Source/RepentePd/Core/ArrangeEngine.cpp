@@ -79,11 +79,19 @@ juce::String ArrangeEngine::arrange(Canvas* canvas)
     constexpr int X_START = 60, X_STEP = 130;
     constexpr int Y_START = 60, Y_STEP = 70;
 
+    // Use delta-based move (same pattern as PDS_MOVE in Executor):
+    // getObjectBounds returns raw pd coords; moveObjects takes a delta.
+    // moveObjectTo(x,y) adds +1542 before calling Interface::moveObject —
+    // wrong coord space for objects created at raw pd coords.
+    auto* cnvPtr = canvas->patch.getRawPointer();
     for (auto& [layer, layerObjs] : layers) {
-        int x = X_START + layer * X_STEP;
+        int const targetX = X_START + layer * X_STEP;
         for (int i = 0; i < static_cast<int>(layerObjs.size()); ++i) {
-            int y = Y_START + i * Y_STEP;
-            canvas->patch.moveObjectTo(layerObjs[i]->getPointer(), x, y);
+            int const targetY = Y_START + i * Y_STEP;
+            auto* gobj = layerObjs[i]->getPointer();
+            int curX = 0, curY = 0, curW = 0, curH = 0;
+            pd::Interface::getObjectBounds(cnvPtr, gobj, &curX, &curY, &curW, &curH);
+            canvas->patch.moveObjects({ gobj }, targetX - curX, targetY - curY);
         }
     }
     canvas->synchronise();
