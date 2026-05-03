@@ -108,9 +108,20 @@ void ObjectTreePanel::refresh(Canvas* canvas, Executor const* executor)
     addGroup("UI",      ui,   uiPtrs);
     addGroup("Control", ctrl, ctrlPtrs);
 
+    // Sync selectedRowIndex from current canvas selection (survives refresh() calls)
+    for (int i = 0; i < canvas->selectedComponents.getNumSelected(); ++i) {
+        if (auto* comp = canvas->selectedComponents.getSelectedItem(i).get()) {
+            if (auto* obj = dynamic_cast<Object*>(comp)) {
+                for (int j = 0; j < static_cast<int>(rowObjects.size()); ++j) {
+                    if (rowObjects[static_cast<size_t>(j)] == obj) { selectedRowIndex = j; break; }
+                }
+                break;
+            }
+        }
+    }
+
     // Register for canvas selection changes (bidirectional sync)
-    if (canvas)
-        canvas->selectedComponents.addChangeListener(this);
+    canvas->selectedComponents.addChangeListener(this);
 
     repaint();
 }
