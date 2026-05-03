@@ -16,6 +16,7 @@ enum class CommandType {
     PDS_LIST,
     PDS_MOVE,
     PDS_LUA,
+    PDS_ARRANGE,
     HELP,
     CLEAR,
     PASSTHROUGH, // natural language → Repente (Phase 3)

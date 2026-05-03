@@ -27,6 +27,12 @@ CommandResult CommandParser::parse(juce::String const& input)
         return r;
     }
 
+    if (trimmed.startsWithIgnoreCase("/arrange"))
+    {
+        result.type = CommandType::PDS_ARRANGE;
+        return result;
+    }
+
     if (trimmed.equalsIgnoreCase("/help"))
     {
         result.type = CommandType::HELP;

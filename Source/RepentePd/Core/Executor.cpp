@@ -5,6 +5,7 @@
 
 #include "Utility/Config.h" // brings using namespace juce + JUCE GUI modules (plugdata convention)
 #include "Executor.h"
+#include "ArrangeEngine.h"
 #include "Canvas.h" // needed for canvas->patch mutations and canvas->synchronise()
 #include "Object.h"
 #include "Utility/SettingsFile.h"
@@ -24,6 +25,7 @@ namespace {
         case CommandType::PDS_LIST:    return "PDS_LIST";
         case CommandType::PDS_MOVE:    return "PDS_MOVE";
         case CommandType::PDS_LUA:     return "PDS_LUA";
+        case CommandType::PDS_ARRANGE: return "PDS_ARRANGE";
         case CommandType::HELP:        return "HELP";
         case CommandType::CLEAR:       return "CLEAR";
         case CommandType::PASSTHROUGH: return "PASSTHROUGH";
@@ -260,6 +262,13 @@ void Executor::execute(CommandResult const& cmd,
             for (auto const& [name, entry] : registry)
                 lines.add("  " + name + "  [" + entry.text + "]");
             if (onResult) onResult(lines.joinIntoString("\n"));
+            break;
+        }
+
+        case CommandType::PDS_ARRANGE:
+        {
+            juce::String result = ArrangeEngine::arrange(canvas);
+            if (onResult) onResult(result);
             break;
         }
 

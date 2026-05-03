@@ -246,6 +246,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             pdInstance->logMessage(juce::String::fromUTF8(
                 "  /pds <cmd>       \xe2\x86\x92 pd-script  (/help pds)\n"
                 "  /lua <expr>      \xe2\x86\x92 Lua inline  (/help lua)\n"
+                "  /arrange         \xe2\x86\x92 arrange objects by signal flow\n"
                 "  /analyze <q>     \xe2\x86\x92 ask LLM, no execution\n"
                 "  /history         \xe2\x86\x92 show turn count\n"
                 "  /history clear   \xe2\x86\x92 wipe conversation history\n"
@@ -445,6 +446,16 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                     });
                 }
             }
+        });
+        return {};
+    }
+
+    // /arrange → topology-aware layout
+    if (msg.startsWith("/arrange")) {
+        auto cmd = CommandParser::parse(msg);
+        executor->submit(cmd, [this, pd = pdInstance](juce::String const& result) {
+            pd->logMessage(result);
+            if (onRegistryChanged) onRegistryChanged();
         });
         return {};
     }
