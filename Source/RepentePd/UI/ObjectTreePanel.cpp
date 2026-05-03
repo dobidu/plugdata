@@ -221,18 +221,16 @@ void ObjectTreePanel::paint(juce::Graphics& g)
         bool const isSelected = (i == selectedRowIndex && !isHeader);
 
         if (isSelected) {
-            // Background fill + left accent bar
-            g.setColour(PlugDataColours::toolbarActiveColour.withAlpha(0.18f));
+            g.setColour(PlugDataColours::sidebarActiveBackgroundColour);
             g.fillRect(0, y, getWidth(), lineH);
             g.setColour(PlugDataColours::toolbarActiveColour);
             g.fillRect(0, y, 2, lineH);
         }
 
-        // Bold + active colour for selected item; headers always bold+active
         bool const useBold = isHeader || isSelected;
         g.setFont(useBold ? headerFont : font);
-        g.setColour(isSelected || isHeader ? PlugDataColours::toolbarActiveColour
-                                           : PlugDataColours::toolbarTextColour);
+        g.setColour(isHeader ? PlugDataColours::toolbarActiveColour
+                             : PlugDataColours::toolbarTextColour);
         g.drawText(line, 8, y, getWidth() - 16, lineH,
                    juce::Justification::centredLeft, true);
         y += lineH;
