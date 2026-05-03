@@ -293,6 +293,63 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         if (sf->hasProperty("repente_model")) cfg.model  = sf->getProperty<String>("repente_model");
         if (sf->hasProperty("repente_key"))   cfg.apiKey = sf->getProperty<String>("repente_key");
         bridge->setConfig(std::move(cfg));
+
+        // First-launch auto-detect: no URL configured → probe Ollama then repente server
+        if (!sf->hasProperty("repente_url")) {
+            pd->logRepente("repente: no config found — detecting LLM backend...");
+
+            // Probe Ollama at localhost:11434
+            {
+                RepentePd::RepenteClient::Config probeCfg;
+                probeCfg.url   = "http://localhost:11434";
+                probeCfg.model = "llama3.2";
+                bridge->setConfig(probeCfg);
+            }
+
+            bridge->ping([this](bool ok, juce::String const&) {
+                if (ok) {
+                    auto* sf2 = SettingsFile::getInstance();
+                    sf2->setProperty("repente_url",   juce::String("http://localhost:11434"));
+                    sf2->setProperty("repente_model", juce::String("llama3.2"));
+                    sf2->saveSettings();
+                    pd->logRepente("repente: Ollama detected at localhost:11434 (model: llama3.2)");
+                    pd->logMessage("  run: ollama list          to see installed models\n"
+                                   "  use: /config model <name> to switch");
+                    return;
+                }
+                // Ollama not found — probe repente server at localhost:7860
+                {
+                    RepentePd::RepenteClient::Config probeCfg;
+                    probeCfg.url   = "http://localhost:7860";
+                    probeCfg.model = "repente-1";
+                    bridge->setConfig(probeCfg);
+                }
+                bridge->ping([this](bool ok2, juce::String const&) {
+                    if (ok2) {
+                        auto* sf2 = SettingsFile::getInstance();
+                        sf2->setProperty("repente_url",   juce::String("http://localhost:7860"));
+                        sf2->setProperty("repente_model", juce::String("repente-1"));
+                        sf2->saveSettings();
+                        pd->logRepente("repente: server detected at localhost:7860");
+                        return;
+                    }
+                    // Neither found — reset to defaults and show instructions
+                    RepentePd::RepenteClient::Config defCfg;
+                    bridge->setConfig(defCfg);
+                    pd->logRepente("repente: no LLM detected — configure with:");
+                    pd->logMessage(
+                        "  Ollama (local, free):\n"
+                        "    /config url http://localhost:11434\n"
+                        "    /config model llama3.2\n"
+                        "  OpenAI:\n"
+                        "    /config url https://api.openai.com\n"
+                        "    /config key sk-...\n"
+                        "    /config model gpt-4o\n"
+                        "  repente server:\n"
+                        "    /config url http://localhost:7860");
+                });
+            });
+        }
     }
 
     statusbar->setAlwaysOnTop(true);

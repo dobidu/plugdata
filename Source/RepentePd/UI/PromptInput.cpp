@@ -228,7 +228,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             pdInstance->logRepente(juce::String::fromUTF8("LLM bridge  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
             pdInstance->logMessage(juce::String::fromUTF8(
                 "  /config url <url>           \xe2\x86\x92 set server (OpenAI-compat)\n"
-                "  /config model <name>        \xe2\x86\x92 set model (gpt-4o, repente-1, \xe2\x80\xa6)\n"
+                "  /config model <name>        \xe2\x86\x92 set model\n"
                 "  /config key <key>           \xe2\x86\x92 set API key (stored)\n"
                 "  /config history on|off      \xe2\x86\x92 persist history across sessions\n"
                 "  /config autoplace on|off    \xe2\x86\x92 cursor placement (off = LLM coords)\n"
@@ -240,7 +240,18 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  /history clear       \xe2\x86\x92 wipe conversation history\n"
                 "  <free text>          \xe2\x86\x92 generate patch (auto-detected + executed)\n"
                 "\n"
-                "  Default: http://localhost:7860  \xe2\x80\xa2  settings persist"));
+                "  Backends:\n"
+                "    Ollama (local, free):\n"
+                "      /config url http://localhost:11434\n"
+                "      /config model llama3.2\n"
+                "    OpenAI:\n"
+                "      /config url https://api.openai.com\n"
+                "      /config key sk-...\n"
+                "      /config model gpt-4o\n"
+                "    repente server:\n"
+                "      /config url http://localhost:7860\n"
+                "\n"
+                "  Settings persist across sessions."));
         } else if (topic == "commands") {
             pdInstance->logRepente(juce::String::fromUTF8("Commands  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
             pdInstance->logMessage(juce::String::fromUTF8(
@@ -332,9 +343,18 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             juce::String masked = cfg.apiKey.isNotEmpty() ? "****" : "(not set)";
             bool const persist    = SettingsFile::getInstance()->getProperty<bool>("repente_persist_history");
             bool const autoplace  = SettingsFile::getInstance()->getProperty<bool>("repente_autoplace");
+            // URL backend hint
+            juce::String urlNote;
+            if (cfg.url.contains("11434"))
+                urlNote = "  (Ollama)";
+            else if (cfg.url.contains("7860"))
+                urlNote = "  (repente server)";
+            else if (!cfg.url.startsWithIgnoreCase("http://localhost")
+                  && !cfg.url.startsWithIgnoreCase("http://127.0.0.1"))
+                urlNote = juce::String::fromUTF8("  (\xe2\x9a\xa0 remote)");
             pdInstance->logRepente("repente config");
             pdInstance->logMessage(
-                "  url:       " + cfg.url + "\n"
+                "  url:       " + cfg.url + urlNote + "\n"
                 "  model:     " + cfg.model + "\n"
                 "  key:       " + masked + "\n"
                 "  history:   " + juce::String(persist ? "persist" : "session-only (default)") + "\n"
@@ -352,6 +372,15 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 bridge->setConfig(std::move(cfg));
             }
             pdInstance->logRepente(juce::String::fromUTF8("repente: url \xe2\x86\x92 ") + newUrl);
+            // Privacy warning for non-localhost URLs
+            auto const urlLower = newUrl.trim().toLowerCase();
+            bool const isLocal = urlLower.startsWith("http://localhost")
+                              || urlLower.startsWith("http://127.0.0.1")
+                              || urlLower.startsWith("https://localhost")
+                              || urlLower.startsWith("https://127.0.0.1");
+            if (!isLocal)
+                pdInstance->logMessage(juce::String::fromUTF8(
+                    "  \xe2\x9a\xa0  remote URL: canvas patch data will be sent to this server"));
             return {};
         }
 
