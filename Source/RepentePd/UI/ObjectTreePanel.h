@@ -7,15 +7,18 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "RepentePd/Core/Executor.h"
+#include <vector>
 
 class Canvas;
+class Object;
 
 namespace RepentePd {
 
-class ObjectTreePanel final : public juce::Component {
+class ObjectTreePanel final : public juce::Component
+                            , public juce::ChangeListener {
 public:
     ObjectTreePanel();
-    ~ObjectTreePanel() override = default;
+    ~ObjectTreePanel() override;
 
     // Full canvas scan — shows all objects; executor provides names for REPL-created ones.
     void refresh(Canvas* canvas, Executor const* executor = nullptr);
@@ -25,10 +28,16 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override {}
 
+    void mouseDown(juce::MouseEvent const& e) override;
+    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
+
 private:
     static juce::String classify(juce::String const& text);
 
     juce::StringArray displayLines;
+    std::vector<Object*> rowObjects; // parallel to displayLines; nullptr = header/empty
+    Canvas* currentCanvas = nullptr;
+    int selectedRowIndex  = -1;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ObjectTreePanel)
 };
