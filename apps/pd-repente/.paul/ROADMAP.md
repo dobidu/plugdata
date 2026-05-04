@@ -28,7 +28,7 @@ Bridge→Executor full wiring, /config command (url/model/key/test), SettingsFil
 cancel-token for safe shutdown.
 AC: free text → LLM → canvas live (Ollama tested); /config persists; quit crash-free.
 
-## Milestone 2: Full UX (Phases 4–5)
+## Milestone 2: Full UX (Phases 4–5) ✅ COMPLETE (2026-05-04)
 
 ### Phase 04: Bidirectionality + Analysis ✅ COMPLETE (2026-05-02)
 Plans: 01 ✓ | 02 ✓ | 03 ✓ (3/3)
@@ -40,8 +40,8 @@ history persistence opt-in (/config history on|off), /history + /history clear c
 /config expanded (history, merge), startup focus on prompt bar.
 AC: context-aware generation; multi-turn iterative builds; /analyze text-only; history survives restart.
 
-### Phase 05: Tier 2 + V1.0 Polish (3-4w)
-Plans: 01 · 02 · 03 · 04
+### Phase 05: Tier 2 + V1.0 Polish ✅ COMPLETE (2026-05-04)
+Plans: 01 ✓ | 02 ✓ | 03 ✓ | 04 ✓ (4/4)
 
 **05-01: CanvasLayouter — auto-placement (2 plans)**
 Existing plugdata infrastructure to reuse:

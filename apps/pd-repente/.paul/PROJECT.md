@@ -54,9 +54,10 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 
 ## Active Requirements
 
-- [ ] ObjectTreePanel: full canvas scan (GUI-added + sub-objects) — deferred Phase 05+
-- [ ] Ollama auto-detect (localhost:11434) — Phase 05
-- [ ] First-launch wizard + privacy warning for remote URLs — Phase 05
+- [ ] ObjectTreePanel: full canvas scan (sub-patches) — deferred post-V1
+- [ ] Battery B: 5/5 text→canvas→audio tests — post-V1 verification
+- [ ] Battery F: pad→drums→pattern→combined — post-V1 verification
+- [ ] Windows/Linux smoke tests — post-V1
 
 ## Key Decisions
 
@@ -79,6 +80,18 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 | Bridge owns message construction; RepenteClient is transport-only | 04-03 | Clean separation; no history logic leaks into HTTP layer |
 | History persistence off by default; opt-in via /config history on | 04-03 | Avoids silent accumulation; user controls privacy |
 | JUCE JSON (DynamicObject) for history serialization | 04-03 | No new dep; nlohmann/json include chain not clean in Bridge.cpp |
+| refresh() must re-sync selectedRowIndex from canvas after rebuild | 05-03 | handleAsyncUpdate resets it; re-derive from source of truth |
+| Console-only first-launch wizard (no modal) | 05-04 | Consistent with pd-repente UX; logRepente is the primary channel |
+| Sequential auto-detect pings (Ollama → repente server) | 05-04 | Avoids race condition; simple state machine |
+
+## Validated Requirements (shipped — Phase 05)
+
+- ✓ CanvasLayouter auto-placement via ObjectGrid::positionNewObject() — Phase 05-01
+- ✓ /arrange: signal-flow topology BFS layout — Phase 05-02
+- ✓ ObjectTreePanel: clickable rows, canvas↔tree bidirectional selection sync — Phase 05-03
+- ✓ Ollama auto-detect on first launch (localhost:11434 → localhost:7860) — Phase 05-04
+- ✓ Privacy warning on non-localhost URL configuration — Phase 05-04
+- ✓ /help llm: Ollama + OpenAI + repente server setup examples — Phase 05-04
 
 ---
-*Last updated: 2026-05-02 — Phase 04 complete*
+*Last updated: 2026-05-04 — Phase 05 complete · V1.0*
