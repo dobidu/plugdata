@@ -31,6 +31,23 @@ ObjectTreePanel::ObjectTreePanel()
 {
     displayLines.add("(no objects)");
     rowObjects.push_back(nullptr);
+
+    vp_.setScrollBarsShown(true, false);
+    vp_.setViewedComponent(&content_, false);
+    addAndMakeVisible(vp_);
+}
+
+void ObjectTreePanel::resized()
+{
+    vp_.setBounds(getLocalBounds());
+    updateContentSize();
+}
+
+void ObjectTreePanel::updateContentSize()
+{
+    constexpr int lineH = 18;
+    int const contentH = 4 + static_cast<int>(displayLines.size()) * lineH + 4;
+    content_.setSize(juce::jmax(1, vp_.getMaximumVisibleWidth()), contentH);
 }
 
 ObjectTreePanel::~ObjectTreePanel()
@@ -53,7 +70,7 @@ void ObjectTreePanel::refresh(Canvas* canvas, Executor const* executor)
     if (!canvas || canvas->objects.empty()) {
         displayLines.add("(no objects)");
         rowObjects.push_back(nullptr);
-        repaint();
+        updateContentSize(); content_.repaint();
         return;
     }
 
@@ -89,7 +106,7 @@ void ObjectTreePanel::refresh(Canvas* canvas, Executor const* executor)
     if (dsp.isEmpty() && ui.isEmpty() && ctrl.isEmpty()) {
         displayLines.add("(no objects)");
         rowObjects.push_back(nullptr);
-        repaint();
+        updateContentSize(); content_.repaint();
         return;
     }
 
@@ -123,7 +140,7 @@ void ObjectTreePanel::refresh(Canvas* canvas, Executor const* executor)
     // Register for canvas selection changes (bidirectional sync)
     canvas->selectedComponents.addChangeListener(this);
 
-    repaint();
+    updateContentSize(); content_.repaint();
 }
 
 void ObjectTreePanel::refresh(Executor const& executor)
@@ -145,7 +162,7 @@ void ObjectTreePanel::refresh(Executor const& executor)
     if (dsp.isEmpty() && ui.isEmpty() && control.isEmpty()) {
         displayLines.add("(no objects)");
         rowObjects.push_back(nullptr);
-        repaint();
+        updateContentSize(); content_.repaint();
         return;
     }
 
@@ -163,31 +180,30 @@ void ObjectTreePanel::refresh(Executor const& executor)
     addGroup("UI",      ui);
     addGroup("Control", control);
 
-    repaint();
+    updateContentSize(); content_.repaint();
 }
 
-void ObjectTreePanel::mouseDown(juce::MouseEvent const& e)
+void ObjectTreePanel::ContentComp::mouseDown(juce::MouseEvent const& e)
 {
     constexpr int lineH = 18;
     int const row = (e.getPosition().y - 4) / lineH;
-    if (row < 0 || row >= static_cast<int>(rowObjects.size())) return;
+    if (row < 0 || row >= static_cast<int>(owner.rowObjects.size())) return;
 
-    auto* obj = rowObjects[static_cast<size_t>(row)];
-    if (!obj || !currentCanvas) return;
+    auto* obj = owner.rowObjects[static_cast<size_t>(row)];
+    if (!obj || !owner.currentCanvas) return;
 
-    selectedRowIndex = row;
-    repaint();
+    owner.selectedRowIndex = row;
+    owner.content_.repaint();
 
-    currentCanvas->deselectAll();
-    currentCanvas->setSelected(obj, true, true, true);
+    owner.currentCanvas->deselectAll();
+    owner.currentCanvas->setSelected(obj, true, true, true);
 
-    // Scroll to center object in viewport
-    if (currentCanvas->viewport) {
+    if (owner.currentCanvas->viewport) {
         auto const objCenter = obj->getBounds().getCentre().toFloat();
-        auto const viewArea  = currentCanvas->viewport->getViewArea();
+        auto const viewArea  = owner.currentCanvas->viewport->getViewArea();
         auto const newPos    = objCenter - juce::Point<float>(
             viewArea.getWidth() / 2.0f, viewArea.getHeight() / 2.0f);
-        currentCanvas->viewport->setViewPosition(newPos);
+        owner.currentCanvas->viewport->setViewPosition(newPos);
     }
 }
 
@@ -212,26 +228,26 @@ void ObjectTreePanel::changeListenerCallback(juce::ChangeBroadcaster*)
 
     if (found != selectedRowIndex) {
         selectedRowIndex = found;
-        repaint();
+        content_.repaint();
     }
 }
 
-void ObjectTreePanel::paint(juce::Graphics& g)
+void ObjectTreePanel::ContentComp::paint(juce::Graphics& g)
 {
     g.fillAll(PlugDataColours::panelBackgroundColour);
 
-    auto const& lf        = getLookAndFeel();
+    auto const& lf        = owner.getLookAndFeel();
     auto const activeCol  = lf.findColour(PlugDataColour::toolbarActiveColourId);
     auto const font       = juce::Font(juce::FontOptions(12.0f));
     auto const headerFont = juce::Font(juce::FontOptions(12.0f, juce::Font::bold));
     int y = 4;
     constexpr int lineH = 18;
 
-    for (int i = 0; i < displayLines.size(); ++i) {
-        auto const& line = displayLines[i];
+    for (int i = 0; i < owner.displayLines.size(); ++i) {
+        auto const& line = owner.displayLines[i];
         bool const isHeader = !line.startsWith("  ") && !line.startsWith("(");
 
-        bool const isSelected = (i == selectedRowIndex && !isHeader);
+        bool const isSelected = (i == owner.selectedRowIndex && !isHeader);
 
         if (isSelected) {
             g.setColour(activeCol.withAlpha(0.35f));
