@@ -22,6 +22,7 @@
 
 #include "Pd/Instance.h"
 #include "Pd/Patch.h"
+#include "RepentePd/AudioCapture.h"
 
 namespace pd {
 class Library;
@@ -207,6 +208,14 @@ public:
 
     AtomicValue<ConnectionMessageDisplay*, Sequential> connectionListener = nullptr;
     std::unique_ptr<Autosave> autosave;
+
+    // Audio capture for multimodal loop (C3 Tríade / Plan 06)
+    RepentePd::AudioCapture audioCapture;
+    void startAudioCapture(float durationSec)
+    {
+        audioCapture.startCapture(durationSec, static_cast<int>(getSampleRate()),
+                                  getMainBusNumOutputChannels());
+    }
 
 private:
     int customLatencySamples = 0;

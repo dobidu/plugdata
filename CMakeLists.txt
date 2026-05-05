@@ -254,6 +254,8 @@ file(GLOB plugdata_sources CONFIGURE_DEPENDS
     ${SOURCES_DIRECTORY}/Standalone/InternalSynth.cpp
     ${SOURCES_DIRECTORY}/Standalone/PlugDataApp.h
     ${SOURCES_DIRECTORY}/Standalone/PlugDataWindow.h
+    ${SOURCES_DIRECTORY}/RepentePd/*.h
+    ${SOURCES_DIRECTORY}/RepentePd/*.cpp
     ${SOURCES_DIRECTORY}/RepentePd/UI/*.h
     ${SOURCES_DIRECTORY}/RepentePd/UI/*.cpp
     ${SOURCES_DIRECTORY}/RepentePd/Core/*.h

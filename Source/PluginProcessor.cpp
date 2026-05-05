@@ -1053,6 +1053,7 @@ void PluginProcessor::processVariable(dsp::AudioBlock<float> buffer, MidiBuffer&
 
         blockMidiBuffer.clear();
         outputFifo->writeAudioAndMidi(audioBufferOut, blockMidiBuffer);
+        audioCapture.feedAudio(audioBufferOut);
     }
 
     midiBuffer.clear();
