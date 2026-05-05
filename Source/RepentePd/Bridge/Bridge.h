@@ -26,7 +26,8 @@ public:
     // Returns false if client is busy.
     bool send(juce::String const& prompt,
               bool analyzeOnly = false,
-              std::function<void(bool)> onDone = {});
+              std::function<void(bool)> onDone = {},
+              juce::String const& audioContext = {});
 
     void setConfig(RepenteClient::Config cfg);
     [[nodiscard]] RepenteClient::Config const& getConfig() const;

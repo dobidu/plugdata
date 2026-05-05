@@ -21,18 +21,21 @@ RepenteClient::Config const& Bridge::getConfig() const { return client.getConfig
 bool Bridge::isBusy() const { return client.isBusy(); }
 void Bridge::ping(std::function<void(bool, juce::String)> callback) { client.ping(std::move(callback)); }
 
-bool Bridge::send(juce::String const& prompt, bool analyzeOnly, std::function<void(bool)> onDone)
+bool Bridge::send(juce::String const& prompt, bool analyzeOnly,
+                  std::function<void(bool)> onDone, juce::String const& audioContext)
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
     juce::String context;
     if (auto* canvas = editor ? editor->getCurrentCanvas() : nullptr)
         context = CanvasSerializer::serialize(canvas);
+    if (audioContext.isNotEmpty())
+        context += (context.isNotEmpty() ? "\n" : "") + audioContext;
 
     if (editor && editor->pd)
         editor->pd->logRepente(analyzeOnly ? "repente: analyzing..." : "repente: thinking...");
 
-    // Build full messages array: system (canvas) + history + new user prompt
+    // Build full messages array: system (canvas + audio) + history + new user prompt
     std::vector<RepenteClient::Message> messages;
     if (context.isNotEmpty())
         messages.push_back({"system", context});

@@ -10,6 +10,7 @@
 #include "RepentePd/Bridge/Bridge.h"
 #include "RepentePd/Bridge/RepenteClient.h"
 #include "RepentePd/Bridge/CanvasSerializer.h"
+#include "RepentePd/SpectralAnalyzer.h"
 #include "Utility/SettingsFile.h"
 extern "C" {
 #include <pd-lua/luas/luajit/src/lua.h>
@@ -236,6 +237,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  /config                     \xe2\x86\x92 show current settings\n"
                 "\n"
                 "  /analyze <question>  \xe2\x86\x92 ask LLM, text only, no execution\n"
+                "  /listen [prompt]     \xe2\x86\x92 capture 3s audio \xe2\x86\x92 spectral \xe2\x86\x92 LLM refine\n"
                 "  /history             \xe2\x86\x92 show conversation turn count\n"
                 "  /history clear       \xe2\x86\x92 wipe conversation history\n"
                 "  <free text>          \xe2\x86\x92 generate patch (auto-detected + executed)\n"
@@ -259,6 +261,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  /lua <expr>      \xe2\x86\x92 Lua inline  (/help lua)\n"
                 "  /arrange         \xe2\x86\x92 arrange objects by signal flow\n"
                 "  /analyze <q>     \xe2\x86\x92 ask LLM, no execution\n"
+                "  /listen [prompt] \xe2\x86\x92 audio capture \xe2\x86\x92 spectral \xe2\x86\x92 LLM\n"
                 "  /history         \xe2\x86\x92 show turn count\n"
                 "  /history clear   \xe2\x86\x92 wipe conversation history\n"
                 "  /config \xe2\x80\xa6        \xe2\x86\x92 LLM config  (/help llm)\n"
@@ -298,6 +301,33 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
         } else {
             pdInstance->logMessage("repente: no active canvas");
         }
+        return {};
+    }
+
+    if (msg.startsWith("/listen")) {
+        if (!bridge) {
+            pdInstance->logRepente("repente: bridge not ready -- use /config url to set server");
+            return {};
+        }
+        juce::String prompt = msg.substring(7).trim();
+        if (prompt.isEmpty())
+            prompt = "I just heard the audio output. What do you observe and suggest?";
+
+        if (!pluginEditor || !pluginEditor->pd) return {};
+        pluginEditor->pd->startAudioCapture(3.0f);
+        pdInstance->logRepente("repente: listening (3s)...");
+
+        auto* br = bridge;
+        auto* ppd = pluginEditor->pd;
+
+        juce::Timer::callAfterDelay(3200, [br, ppd, prompt] {
+            auto buffer   = ppd->audioCapture.takeCapture();
+            int const sr  = static_cast<int>(ppd->getSampleRate());
+            auto result   = RepentePd::SpectralAnalyzer::analyze(buffer, sr > 0 ? sr : 44100);
+            auto spectral = RepentePd::SpectralAnalyzer::format(result);
+            ppd->logRepente("repente: analyzing audio...");
+            br->send(prompt, /*analyzeOnly=*/false, {}, spectral);
+        });
         return {};
     }
 

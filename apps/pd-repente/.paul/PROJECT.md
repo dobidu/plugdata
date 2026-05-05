@@ -52,6 +52,13 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 - ✓ Merge mode: LLM patch merged into current canvas — Phase 04
 - ✓ Console type-3 teal for repente status messages — Phase 04
 
+## Validated Requirements (shipped — Phase 06)
+
+- ✓ AudioCapture: wait-free thread-safe tap from processBlock; startCapture/takeCapture API — Phase 06-01
+- ✓ SpectralAnalyzer: multi-frame FFT → 5 frequency bands + top-3 peak frequencies → LLM text — Phase 06-02
+- ✓ Bridge.send() audioContext param: canvas + spectral injected as single system message — Phase 06-03
+- ✓ /listen [prompt] command: capture 3s audio → analyze → inject → LLM refine — Phase 06-03
+
 ## Active Requirements
 
 - [ ] ObjectTreePanel: full canvas scan (sub-patches) — deferred post-V1
@@ -83,6 +90,10 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 | refresh() must re-sync selectedRowIndex from canvas after rebuild | 05-03 | handleAsyncUpdate resets it; re-derive from source of truth |
 | Console-only first-launch wizard (no modal) | 05-04 | Consistent with pd-repente UX; logRepente is the primary channel |
 | Sequential auto-detect pings (Ollama → repente server) | 05-04 | Avoids race condition; simple state machine |
+| AudioCapture: push from audio thread (wait-free atomics), pull from message thread | 06-01 | No mutex in feedAudio; audio thread never blocks |
+| SpectralAnalyzer: stateless static methods, juce::dsp::FFT constructed per call | 06-02 | No state between /listen calls; FFT overhead acceptable for non-real-time use |
+| audioContext appended to canvas context in single system message (newline-separated) | 06-03 | One system message; LLM gets canvas + spectral together |
+| juce::Timer::callAfterDelay for async capture wait (not MessageManager) | 06-03 | Correct JUCE API; MessageManager has no callAfterDelay |
 
 ## Validated Requirements (shipped — Phase 05)
 
@@ -94,4 +105,4 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 - ✓ /help llm: Ollama + OpenAI + repente server setup examples — Phase 05-04
 
 ---
-*Last updated: 2026-05-04 — Phase 05 complete · V1.0*
+*Last updated: 2026-05-05 — Phase 06 complete · Milestone 3 complete*

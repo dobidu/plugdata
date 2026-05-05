@@ -3,23 +3,23 @@
 ## Loop Position
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Milestone 2 COMPLETE — V1.0]
+  ✓        ✓        ✓     [Phase 06 complete — Milestone 3 complete]
 ```
 
 ## Active Milestone
-— (Milestone 2 complete · post-V1 backlog next)
+Milestone 3 — Multimodal Loop (C3 Tríade) · ✅ COMPLETE
 
 ## Active Phase
-— (Phase 05 complete)
+Phase 06: multimodal ✅ COMPLETE (3/3 plans)
 
 ## Active Plan
-—
+— (Phase 06 complete · next milestone TBD)
 
 ## Last Action
-2026-05-04 — Phase 05 UNIFY complete · Milestone 2 closed · V1.0
+2026-05-05 — Phase 06 UNIFY complete · Milestone 3 complete
 
 ## Next Action
-Post-V1 backlog planning (see ROADMAP.md Backlog section)
+Plan next work (backlog: Style Transfer Sonoro, live coding latency, Tier 3)
 
 ## Progress
 - Phase 01: 100% ✅
@@ -27,13 +27,15 @@ Post-V1 backlog planning (see ROADMAP.md Backlog section)
 - Phase 03: 100% ✅
 - Phase 04: 100% ✅
 - Phase 05: 100% ✅ (4/4 plans)
+- Phase 06: 100% ✅ (3/3 plans)
 
 **Milestone 2: 100% ✅ — V1.0 complete**
+**Milestone 3: 100% ✅ — Multimodal Loop complete**
 
 ## Session Continuity
-Last session: 2026-05-04
-Stopped at: Phase 05 complete — V1.0 milestone closed
-Next action: Post-V1 backlog (see ROADMAP.md Backlog section)
+Last session: 2026-05-05
+Stopped at: Phase 06 complete, Milestone 3 complete
+Next action: Choose next milestone from backlog
 Resume file: .paul/ROADMAP.md
 
 ## Open Items
@@ -42,6 +44,7 @@ Resume file: .paul/ROADMAP.md
 - Battery F (pad→drums→pattern→combined) — not yet verified end-to-end
 - CanvasSerializer doesn't recurse into sub-patches — top-level only
 - Windows/Linux smoke tests — manual, deferred post-V1
+- /listen lambda captures raw Bridge*/PluginProcessor* — edge case: plugin destroyed while 3.2s timer pending
 
 ## Accumulated Context
 
@@ -59,7 +62,11 @@ Resume file: .paul/ROADMAP.md
 - findColour() at paint time, not PlugDataColours statics, for reliable theme colors (Phase 05-03)
 - Console-only first-launch wizard; no modal — consistent with pd-repente UX (Phase 05-04)
 - Sequential auto-detect pings (Ollama → repente server) — avoids race condition (Phase 05-04)
+- AudioCapture: push from audio thread (wait-free atomic), pull from message thread — no mutex in feedAudio (Phase 06-01)
+- SpectralAnalyzer: stateless static methods; juce::dsp::FFT constructed per analyze() call — acceptable for non-real-time /listen (Phase 06-02)
+- audioContext appended to canvas context (newline-separated) in single system message — not a separate message (Phase 06-03)
+- juce::Timer::callAfterDelay for async capture wait — MessageManager has no callAfterDelay (Phase 06-03)
 
 ### Git State
-Last commit: f60dd53fc
+Last commit: ad3f5e1c2
 Branch: pd-repente-main

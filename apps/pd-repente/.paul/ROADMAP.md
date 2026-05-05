@@ -70,9 +70,19 @@ Ollama auto-detect (localhost:11434), first-launch wizard, privacy warning,
 user docs, smoke tests 3 OSes. V1.0 public release.
 AC: Ollama detects without manual config; privacy warning on remote URL.
 
+## Milestone 3: Multimodal Loop — C3 Tríade ✅ COMPLETE (2026-05-05)
+
+### Phase 06: Multimodal Loop ✅ COMPLETE (2026-05-05)
+Plans: 01 ✓ | 02 ✓ | 03 ✓ (3/3)
+
+**06-01: AudioCapture** — Wait-free processBlock tap; startCapture(durationSec)/feedAudio/takeCapture() API.
+**06-02: SpectralAnalyzer** — Multi-frame FFT (2048pt Hann, 50% overlap); 5 frequency bands + top-3 peak frequencies → LLM text.
+**06-03: Bridge + /listen** — Bridge.send() audioContext param; `/listen [prompt]` captures 3s → analyzes → injects canvas + spectral as system context.
+
+AC: `/listen` captures 3s audio, analyzes spectrum, sends canvas + spectral as LLM context. ✓
+
 ## Backlog (post-V1)
 - Live coding latency (P2 persona)
 - Tier 3: PatchBox / Orange Pi (3B distilled)
-- Multimodal loop — audio render → spectral analysis (C3 Tríade)
 - SC/MAX cross-language (when Repente reincorporates)
-- Style Transfer Sonoro
+- Style Transfer Sonoro (depends on Phase 06)
