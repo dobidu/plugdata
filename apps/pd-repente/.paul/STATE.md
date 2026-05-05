@@ -68,5 +68,5 @@ Resume file: .paul/ROADMAP.md
 - juce::Timer::callAfterDelay for async capture wait — MessageManager has no callAfterDelay (Phase 06-03)
 
 ### Git State
-Last commit: ad3f5e1c2
+Last commit: ab650b1e0
 Branch: pd-repente-main
