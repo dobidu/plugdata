@@ -14,22 +14,37 @@
 
 The LLM is context-aware: every request includes the current canvas state as a system message in pd-file format, so the model knows what is already on the canvas before generating anything new. You can build on existing patches incrementally, ask questions about them, or generate from scratch.
 
-`pd-repente` is local-first. It works with any OpenAI-compatible server — Ollama, llama-server, LM Studio, or the OpenAI API — and defaults to `localhost`. No data leaves your machine unless you explicitly point it at a remote endpoint.
+`pd-repente` is **local-first**. It works with any OpenAI-compatible server — Ollama, llama-server, LM Studio, or the OpenAI API — and defaults to `localhost`. No data leaves your machine unless you explicitly point it at a remote endpoint. Ollama is auto-detected on first launch with no configuration required.
+
+### The C3 Tríade
+
+`pd-repente` implements a full multimodal feedback loop:
+
+```
+generate → play → /listen → analyze → refine
+```
+
+After generating a patch and hearing it play, type `/listen make the bass heavier` — the tool captures three seconds of audio output, analyzes the spectrum (frequency bands + peak frequencies), and sends both the canvas state and the spectral analysis as context to the LLM. The model hears what it built, not just what it specified.
 
 ---
 
 ## Features
 
-- **Natural language → patch** — free text sent to LLM, response auto-detected and executed (pd patch, pds commands, or Lua)
+- **Natural language → patch** — free text sent to LLM; response auto-detected and executed (pd patch, pds commands, or Lua)
+- **Multimodal /listen** — captures 3s of audio output, analyzes spectrum, injects canvas + spectral summary into next LLM request
 - **Context-aware generation** — canvas serialized to pd-file format and injected as system message on every request
-- **Analysis mode** — `/analyze <question>` asks the LLM about the current patch and returns plain text; nothing is executed on the canvas
+- **Multi-turn conversation** — 20-turn rolling history; LLM builds on previous exchanges
+- **Analysis mode** — `/analyze <question>` returns plain text; nothing is executed on the canvas
 - **Merge mode** — toggle in the prompt bar; generated patches merge into the current canvas instead of opening a new tab
+- **Auto-placement** — objects created via REPL or LLM are placed at available canvas positions; no coordinate guessing
+- **Signal-flow layout** — `/arrange` reflows objects by topology (sources → processors → sinks)
 - **pd-script REPL** — `/pds create / connect / delete / move / list` directly manipulate canvas objects
 - **Sugar syntax** — `@osc~`, `~filter~`, `-> dac~`, `$last` shortcuts for fast patching
 - **Lua scripting** — `{ }` blocks run inline Lua with full `pds.*` API for generative patching
-- **Object Tree Panel** — sidebar shows all canvas objects grouped by type (DSP / UI / Control), including LLM-generated ones
-- **Persistent config** — LLM URL, model name, and API key stored across restarts
-- **Local-first** — defaults to `localhost`; works fully offline with a local model
+- **Object Tree Panel** — sidebar shows all canvas objects grouped by type (DSP / UI / Control); click to select on canvas; canvas selection syncs back to tree
+- **Ollama auto-detect** — first launch pings `localhost:11434` and `localhost:7860` automatically; no `/config` needed if Ollama is running
+- **Persistent config** — LLM URL, model name, API key, and history preferences stored across restarts
+- **Local-first** — defaults to `localhost`; fully offline with a local model
 
 ---
 
@@ -48,6 +63,8 @@ Binary: `build/plugdata_artefacts/Standalone/plugdata`
 
 ### Connect an LLM
 
+If Ollama is running, it is detected automatically on first launch. To configure manually:
+
 ```
 /config url http://localhost:11434    # Ollama running locally
 /config model llama3.2               # any OpenAI-compat model name
@@ -60,7 +77,15 @@ Binary: `build/plugdata_artefacts/Standalone/plugdata`
 make a sine wave at 440 Hz connected to output
 ```
 
-A patch with `osc~ 440` → `dac~` appears and plays. That's it.
+A patch with `osc~ 440` → `dac~` appears and plays.
+
+### Listen and refine
+
+```
+/listen make it warmer
+```
+
+`pd-repente` captures three seconds of audio, analyzes the spectrum, and sends the canvas state + spectral summary to the LLM with your prompt.
 
 ---
 
@@ -77,6 +102,25 @@ route everything through a soft limiter before dac~
 ```
 
 New patches open in a new tab by default. Enable **merge mode** to insert objects into the current canvas instead.
+
+### /listen — multimodal loop
+
+`/listen [prompt]` starts a three-second audio capture from the current output. When capture completes, the spectral analysis (5 frequency bands: sub / low / mid / high-mid / high, plus top-3 peak frequencies in Hz) is appended to the canvas context and sent to the LLM with your prompt.
+
+```
+/listen                         # default: "I just heard the audio output. What do you observe and suggest?"
+/listen the bass is too muddy   # custom prompt
+/listen add more high-end sparkle
+```
+
+The LLM sees both the patch structure (from the canvas) and what it sounds like (from the spectral snapshot) when generating its response.
+
+During the capture window, the console shows:
+```
+repente: listening (3s)...
+repente: analyzing audio...
+repente: thinking...
+```
 
 ### Analysis mode
 
@@ -97,6 +141,32 @@ The **merge** toggle in the prompt bar (left side) controls where generated patc
 
 State persists across restarts.
 
+### Object auto-placement and arrangement
+
+Objects are placed automatically at available canvas positions — no need to specify coordinates with `/pds create`.
+
+```
+/pds create osc~            # placed at next available slot
+/pds create dac~            # placed below osc~
+```
+
+After building a patch, `/arrange` reflows all objects by signal flow topology: sources (oscillators, noise~) at the top, processors (filters, effects) in the middle, sinks (dac~, throw~) at the bottom.
+
+```
+/arrange
+```
+
+### Conversation history
+
+`pd-repente` maintains a rolling 20-turn conversation history. The LLM builds on previous exchanges within a session.
+
+```
+/history                    # show turn count
+/history clear              # wipe history
+/config history on          # persist history across restarts
+/config history off         # session-only (default)
+```
+
 ### pd-script REPL
 
 Direct canvas manipulation without the LLM:
@@ -110,7 +180,7 @@ Direct canvas manipulation without the LLM:
 /pds list
 ```
 
-Objects created via `/pds` get auto-assigned names (`osc_1`, `dac_1`, …) used for subsequent connect/move/delete.
+Objects created via `/pds` get auto-assigned names (`osc_1`, `dac_1`, …) used for subsequent connect/move/delete. Omit coordinates to use auto-placement.
 
 ### Sugar syntax
 
@@ -154,14 +224,20 @@ Prints the pd-file snapshot that will be sent to the LLM as system context on th
 | Command | Description |
 |---|---|
 | `<free text>` | Send to LLM; canvas state injected automatically |
+| `/listen [prompt]` | Capture 3s audio → spectral analysis → LLM with canvas + spectrum context |
 | `/analyze <question>` | Ask LLM about the patch — text response only, no execution |
+| `/arrange` | Reflow objects by signal-flow topology (sources → processors → sinks) |
 | `/pds <cmd>` | pd-script REPL (create / connect / delete / move / list) |
 | `/lua <expr>` | Run Lua expression inline |
+| `/history` | Show conversation turn count |
+| `/history clear` | Wipe conversation history |
 | `/config` | Show current LLM settings |
 | `/config url <url>` | Set server URL (OpenAI-compatible) |
 | `/config model <name>` | Set model name |
 | `/config key <key>` | Set API key (stored, masked in display) |
 | `/config test` | Ping server and verify connectivity |
+| `/config history on\|off` | Persist conversation history across restarts |
+| `/config autoplace on\|off` | Auto-placement (on) vs. LLM-specified coordinates (off) |
 | `/canvas` | Print serialized canvas state (debug) |
 | `/help [topic]` | Help topics: `pds` · `sugar` · `lua` · `llm` · `commands` · `builtin` |
 | `/clear` | Clear console |
@@ -174,11 +250,14 @@ Prints the pd-file snapshot that will be sent to the LLM as system context on th
 
 ### Ollama (recommended for local use)
 
+Ollama running on `localhost:11434` is auto-detected on first launch — no configuration needed.
+
 ```bash
 ollama serve
 ollama pull llama3.2   # or any model
 ```
 
+To override:
 ```
 /config url http://localhost:11434
 /config model llama3.2
@@ -199,6 +278,8 @@ ollama pull llama3.2   # or any model
 /config key sk-...
 ```
 
+> **Privacy:** A warning is shown any time a non-localhost URL is configured. Canvas patch data will be sent to that server.
+
 ### Repente model (recommended)
 
 The Repente model is fine-tuned specifically for Pure Data patch generation and outputs clean, runnable pd syntax by default. Available on Hugging Face — run it with Ollama or llama-server.
@@ -212,31 +293,51 @@ The Repente model is fine-tuned specifically for Pure Data patch generation and 
 
 ## Architecture
 
-For contributors and developers.
-
 ### Component overview
 
 ```
-User input (free text or /pds command)
+User input (free text, /pds, /listen, ...)
         │
    PromptInput  ──  merge toggle
         │
-   ┌────┴──────────────────────┐
-   │                           │
-PD-SCRIPT ENGINE          REPENTE BRIDGE
-CommandParser              Bridge
-SugarExpander         CanvasSerializer ──→ pd-file context
-Executor              RepenteClient   ──→ HTTP POST /v1/chat/completions
-   │                  PdParser
-   │                  Executor / openPatch / PatchMerger
-   └──────┬───────────┘
-          │
-       EXECUTOR
-       pd::Patch wrapper
-       per-canvas registry
-       message thread only
-          │
-    PURE DATA CANVAS (libpd)
+   ┌────┴────────────────────────────────┐
+   │                                     │
+PD-SCRIPT ENGINE                   REPENTE BRIDGE
+CommandParser                       Bridge
+SugarExpander                  CanvasSerializer ──→ pd-file context
+Executor                       SpectralAnalyzer ──→ spectral context (/listen)
+   │                           RepenteClient   ──→ HTTP POST /v1/chat/completions
+   │                           PdParser
+   │                           Executor / openPatch / PatchMerger
+   │
+AUDIO CAPTURE (AudioCapture)
+processBlock tap (wait-free)
+startCapture / feedAudio / takeCapture
+        │
+   SpectralAnalyzer::analyze()
+   FFT (2048pt Hann, 50% overlap)
+   5 bands + top-3 peaks → text
+        │
+   Bridge::send(..., audioContext)
+   system message: canvas + "\n" + spectral
+```
+
+### /listen flow
+
+```
+/listen prompt
+    │
+    ├─ startAudioCapture(3s)       ← PluginProcessor.startAudioCapture()
+    │   └─ AudioCapture::startCapture()
+    │       └─ processBlock feeds AudioCapture::feedAudio() [audio thread, wait-free]
+    │
+    ├─ (3.2s delay via juce::Timer::callAfterDelay)
+    │
+    ├─ takeCapture()               ← returns juce::AudioBuffer<float>
+    ├─ SpectralAnalyzer::analyze() ← multi-frame FFT
+    ├─ SpectralAnalyzer::format()  ← "spectral: sub=X.XX low=X.XX ... | peaks: NNNHz"
+    └─ Bridge::send(prompt, false, {}, spectralText)
+         └─ system message = canvas + "\n" + spectralText
 ```
 
 ### Response routing
@@ -249,14 +350,16 @@ Executor              RepenteClient   ──→ HTTP POST /v1/chat/completions
 | Lines starting with `/pds` | PDS_COMMANDS | Execute via Executor |
 | Anything else | LUA_BLOCK | Run in Lua engine |
 
-`/analyze` bypasses `PdParser` entirely — response logged as plain text.
+`/analyze` and `/listen` responses bypass `PdParser` for analysis display — but `/listen` with a generation prompt goes through the normal routing.
 
 ### Threading model
 
-- **Audio thread** — never touched by repente code
-- **HTTP thread** (`std::thread`) — all `RepenteClient` network calls
-- **Message thread** — all canvas mutations, via `MessageManager::callAsync`
-- **Cancel token** (`shared_ptr<atomic<bool>>`) — safe shutdown of detached threads on quit
+| Thread | Role |
+|---|---|
+| **Audio thread** | `processBlock` → `AudioCapture::feedAudio()` — wait-free atomic write only; no mutex |
+| **HTTP thread** (`std::thread`) | All `RepenteClient` network calls |
+| **Message thread** | All canvas mutations; all Bridge/PromptInput logic; `Timer::callAfterDelay` callbacks |
+| **Cancel token** (`shared_ptr<atomic<bool>>`) | Safe shutdown of detached HTTP threads on quit |
 
 ### Key design decisions
 
@@ -265,17 +368,23 @@ Executor              RepenteClient   ──→ HTTP POST /v1/chat/completions
 | pd-file format for canvas context | LLMs are trained on it; no translation layer needed |
 | OpenAI-compat API only | Switching model = switching URL; no binary integration |
 | Per-canvas Executor registry | Object identity (`osc_1`) isolated per tab |
-| SettingsFile for config | Custom keys registered in `defaultSettings`; cross-platform persistence |
+| AudioCapture: push from audio thread (wait-free), pull from message thread | Audio thread never blocks; no mutex in hot path |
+| audioContext appended to canvas context in single system message | One system message; LLM sees canvas + spectral in one block |
+| `juce::Timer::callAfterDelay` for async capture wait | Fires on message thread; no extra threading needed |
+| SpectralAnalyzer: stateless static methods, FFT per call | No state to manage; `/listen` is not real-time |
+| History persistence off by default | Opt-in; user controls what leaves the session |
 | CONFIGURE_DEPENDS on cmake glob | New `Bridge/*.cpp` files auto-included without reconfigure |
 
 ---
 
 ## Roadmap
 
-- **Phase 04** (current) — bidirectionality: context injection, analysis mode, merge mode, session persistence
-- **Phase 05** — auto-layout (smart object placement via `CanvasLayouter`), Ollama auto-detect, first-launch wizard, V1.0 public release
-
-Media, screenshots, and demo patches will be added at V1.0.
+| Milestone | Status |
+|---|---|
+| **M1: MVP** — Foundation, pd-script REPL, Repente Bridge | ✅ Complete |
+| **M2: Full UX / V1.0** — Context injection, analysis, merge mode, auto-placement, /arrange, V1.0 polish | ✅ Complete |
+| **M3: Multimodal Loop** — AudioCapture, SpectralAnalyzer, /listen C3 Tríade | ✅ Complete |
+| **Next** — Style Transfer Sonoro, live coding latency, Tier 3 (PatchBox / Orange Pi) | Backlog |
 
 ---
 
@@ -287,6 +396,7 @@ Media, screenshots, and demo patches will be added at V1.0.
 | HTTP client | cpp-httplib (header-only, vendored) |
 | JSON | nlohmann/json (header-only, vendored) |
 | Scripting | pd-lua / LuaJIT 5.4 |
+| DSP analysis | juce::dsp::FFT (JUCE DSP module) |
 | Build | CMake 3.21+ + Ninja |
 | CI | GitHub Actions (Win / macOS / Linux) |
 
