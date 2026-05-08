@@ -544,8 +544,15 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
     }
 
     // {expr}, <id> > <msg>, > (deselect) → delegate to CommandInput
-    if (msg.startsWith("{") || msg.contains(" > ") || msg.trimStart().startsWith(">")) {
-        return CommandInput::executeCommand(pdInstance, msg);
+    // "<id> > <msg>": only match when lhs is a single token (no spaces) — avoids
+    // misrouting pasted prompts that contain " > " as English punctuation.
+    {
+        auto const gtPos   = msg.indexOf(" > ");
+        bool const isObjMsg = gtPos > 0 && !msg.substring(0, gtPos).containsWhitespace();
+        bool const isDeselect = msg.trimStart() == ">";
+        if (msg.startsWith("{") || isObjMsg || isDeselect) {
+            return CommandInput::executeCommand(pdInstance, msg);
+        }
     }
 
     // Free text → Repente LLM bridge
