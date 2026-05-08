@@ -237,7 +237,8 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  /config                     \xe2\x86\x92 show current settings\n"
                 "\n"
                 "  /analyze <question>  \xe2\x86\x92 ask LLM, text only, no execution\n"
-                "  /listen [prompt]     \xe2\x86\x92 capture 3s audio \xe2\x86\x92 spectral \xe2\x86\x92 LLM refine\n"
+                "  /listen              \xe2\x86\x92 capture 3s audio \xe2\x86\x92 spectral analysis (text)\n"
+                "  /listen <prompt>     \xe2\x86\x92 capture 3s audio \xe2\x86\x92 spectral \xe2\x86\x92 generate/modify\n"
                 "  /history             \xe2\x86\x92 show conversation turn count\n"
                 "  /history clear       \xe2\x86\x92 wipe conversation history\n"
                 "  <free text>          \xe2\x86\x92 generate patch (auto-detected + executed)\n"
@@ -261,7 +262,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  /lua <expr>      \xe2\x86\x92 Lua inline  (/help lua)\n"
                 "  /arrange         \xe2\x86\x92 arrange objects by signal flow\n"
                 "  /analyze <q>     \xe2\x86\x92 ask LLM, no execution\n"
-                "  /listen [prompt] \xe2\x86\x92 audio capture \xe2\x86\x92 spectral \xe2\x86\x92 LLM\n"
+                "  /listen [prompt] \xe2\x86\x92 audio capture \xe2\x86\x92 spectral (no prompt=analyze)\n"
                 "  /history         \xe2\x86\x92 show turn count\n"
                 "  /history clear   \xe2\x86\x92 wipe conversation history\n"
                 "  /config \xe2\x80\xa6        \xe2\x86\x92 LLM config  (/help llm)\n"
@@ -310,8 +311,9 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             return {};
         }
         juce::String prompt = msg.substring(7).trim();
-        if (prompt.isEmpty())
-            prompt = "I just heard the audio output. What do you observe and suggest?";
+        bool const analyzeOnly = prompt.isEmpty();
+        if (analyzeOnly)
+            prompt = "I just heard the audio output. Describe the spectral content and suggest how to improve it.";
 
         if (!pluginEditor || !pluginEditor->pd) return {};
         pluginEditor->pd->startAudioCapture(3.0f);
@@ -320,13 +322,13 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
         auto* br = bridge;
         auto* ppd = pluginEditor->pd;
 
-        juce::Timer::callAfterDelay(3200, [br, ppd, prompt] {
+        juce::Timer::callAfterDelay(3200, [br, ppd, prompt, analyzeOnly] {
             auto buffer   = ppd->audioCapture.takeCapture();
             int const sr  = static_cast<int>(ppd->getSampleRate());
             auto result   = RepentePd::SpectralAnalyzer::analyze(buffer, sr > 0 ? sr : 44100);
             auto spectral = RepentePd::SpectralAnalyzer::format(result);
             ppd->logRepente("repente: analyzing audio...");
-            br->send(prompt, /*analyzeOnly=*/false, {}, spectral);
+            br->send(prompt, analyzeOnly, {}, spectral);
         });
         return {};
     }
