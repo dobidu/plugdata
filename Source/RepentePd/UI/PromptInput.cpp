@@ -548,7 +548,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
     // misrouting pasted prompts that contain " > " as English punctuation.
     {
         auto const gtPos   = msg.indexOf(" > ");
-        bool const isObjMsg = gtPos > 0 && !msg.substring(0, gtPos).containsWhitespace();
+        bool const isObjMsg = gtPos > 0 && !msg.substring(0, gtPos).containsChar(' ');
         bool const isDeselect = msg.trimStart() == ">";
         if (msg.startsWith("{") || isObjMsg || isDeselect) {
             return CommandInput::executeCommand(pdInstance, msg);
