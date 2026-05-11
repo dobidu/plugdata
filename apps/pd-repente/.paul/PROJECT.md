@@ -62,8 +62,8 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 ## Active Requirements
 
 - [ ] ObjectTreePanel: full canvas scan (sub-patches) — deferred post-V1
-- [ ] Battery B: 5/5 text→canvas→audio tests — post-V1 verification
-- [ ] Battery F: pad→drums→pattern→combined — post-V1 verification
+- [~] Battery B: 5/5 text→canvas→audio — PdParser routing + fence stripping automated (7 tests); LLM→canvas→audio end-to-end pending manual run
+- [~] Battery F: pad→drums→pattern→combined — PdParser routing automated (4 tests); LLM→canvas→audio end-to-end pending manual run
 - [ ] Windows/Linux smoke tests — post-V1
 
 ## Key Decisions

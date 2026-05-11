@@ -40,8 +40,8 @@ Resume file: .paul/ROADMAP.md
 
 ## Open Items
 - ffmpeg `build_ffmpeg.sh` 10.9→10.13 patch: must commit to pd-else submodule for macOS CI
-- Battery B (5/5 text→canvas→audio tests) — not yet verified end-to-end
-- Battery F (pad→drums→pattern→combined) — not yet verified end-to-end
+- Battery B — PdParser routing automated (7 tests); LLM→canvas→audio end-to-end needs manual run
+- Battery F — PdParser routing automated (4 tests); LLM→canvas→audio end-to-end needs manual run
 - CanvasSerializer doesn't recurse into sub-patches — top-level only
 - Windows/Linux smoke tests — manual, deferred post-V1
 - /listen lambda captures raw Bridge*/PluginProcessor* — edge case: plugin destroyed while 3.2s timer pending
