@@ -7,6 +7,8 @@
 
 #include "Sidebar/CommandInput.h"
 #include "RepentePd/Core/Executor.h"
+#include <atomic>
+#include <memory>
 
 struct lua_State;
 
@@ -19,7 +21,7 @@ namespace RepentePd {
 class PromptInput final : public CommandInput {
 public:
     PromptInput(PluginEditor* editor, Executor* executor);
-    ~PromptInput() override = default;
+    ~PromptInput() override { *listenCancelToken = true; }
 
     SmallArray<std::pair<int, String>> executeCommand(pd::Instance* pd, String message) override;
 
@@ -46,6 +48,7 @@ private:
     PluginEditor* pluginEditor;
     Executor*     executor;
     Bridge*       bridge = nullptr;
+    std::shared_ptr<std::atomic<bool>> listenCancelToken = std::make_shared<std::atomic<bool>>(false);
 
     juce::ToggleButton mergeToggle;
     juce::Label        mergeLabel { {}, "merge" };

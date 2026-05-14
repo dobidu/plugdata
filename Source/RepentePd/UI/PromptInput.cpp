@@ -319,10 +319,13 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
         pluginEditor->pd->startAudioCapture(3.0f);
         pdInstance->logRepente("repente: listening (3s)...");
 
-        auto* br = bridge;
+        listenCancelToken = std::make_shared<std::atomic<bool>>(false);
+        auto token = listenCancelToken;
+        auto* br  = bridge;
         auto* ppd = pluginEditor->pd;
 
-        juce::Timer::callAfterDelay(3200, [br, ppd, prompt, analyzeOnly] {
+        juce::Timer::callAfterDelay(3200, [token, br, ppd, prompt, analyzeOnly] {
+            if (*token) return;
             auto buffer   = ppd->audioCapture.takeCapture();
             int const sr  = static_cast<int>(ppd->getSampleRate());
             auto result   = RepentePd::SpectralAnalyzer::analyze(buffer, sr > 0 ? sr : 44100);
