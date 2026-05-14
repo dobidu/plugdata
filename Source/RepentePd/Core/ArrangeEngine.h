@@ -13,9 +13,13 @@ namespace RepentePd {
 
 class ArrangeEngine {
 public:
-    // Arrange all objects on canvas by signal-flow depth (sources left, sinks right).
+    enum class Direction { LeftRight, RightLeft, TopDown, BottomUp };
+
+    static Direction parseDirection(juce::String const& s);
+
+    // Arrange all objects on canvas by signal-flow depth.
     // Returns a user-facing status string. Must be called on the message thread.
-    static juce::String arrange(Canvas* canvas);
+    static juce::String arrange(Canvas* canvas, Direction dir = Direction::LeftRight);
 };
 
 } // namespace RepentePd

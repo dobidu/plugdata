@@ -16,7 +16,16 @@
 
 namespace RepentePd {
 
-juce::String ArrangeEngine::arrange(Canvas* canvas)
+ArrangeEngine::Direction ArrangeEngine::parseDirection(juce::String const& s)
+{
+    auto t = s.trim().toLowerCase();
+    if (t == "right-left" || t == "rl") return Direction::RightLeft;
+    if (t == "top-down"   || t == "td") return Direction::TopDown;
+    if (t == "bottom-up"  || t == "bu") return Direction::BottomUp;
+    return Direction::LeftRight;
+}
+
+juce::String ArrangeEngine::arrange(Canvas* canvas, Direction dir)
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
@@ -76,8 +85,11 @@ juce::String ArrangeEngine::arrange(Canvas* canvas)
     if (auto patchPtr = canvas->patch.getPointer())
         canvas_dirty(patchPtr.get(), 1);
 
-    constexpr int X_START = 60, X_STEP = 130;
-    constexpr int Y_START = 60, Y_STEP = 70;
+    constexpr int MAIN_START = 60, MAIN_STEP = 130;
+    constexpr int CROSS_START = 60, CROSS_STEP = 70;
+
+    bool const isHorizontal = (dir == Direction::LeftRight || dir == Direction::RightLeft);
+    bool const isReversed   = (dir == Direction::RightLeft || dir == Direction::BottomUp);
 
     // Use delta-based move (same pattern as PDS_MOVE in Executor):
     // getObjectBounds returns raw pd coords; moveObjects takes a delta.
@@ -85,9 +97,11 @@ juce::String ArrangeEngine::arrange(Canvas* canvas)
     // wrong coord space for objects created at raw pd coords.
     auto* cnvPtr = canvas->patch.getRawPointer();
     for (auto& [layer, layerObjs] : layers) {
-        int const targetX = X_START + layer * X_STEP;
+        int const mainPos  = MAIN_START + (isReversed ? (maxDepth - layer) : layer) * MAIN_STEP;
         for (int i = 0; i < static_cast<int>(layerObjs.size()); ++i) {
-            int const targetY = Y_START + i * Y_STEP;
+            int const crossPos = CROSS_START + i * CROSS_STEP;
+            int const targetX  = isHorizontal ? mainPos  : crossPos;
+            int const targetY  = isHorizontal ? crossPos : mainPos;
             auto* gobj = layerObjs[i]->getPointer();
             int curX = 0, curY = 0, curW = 0, curH = 0;
             pd::Interface::getObjectBounds(cnvPtr, gobj, &curX, &curY, &curW, &curH);
@@ -96,8 +110,9 @@ juce::String ArrangeEngine::arrange(Canvas* canvas)
     }
     canvas->synchronise();
 
+    juce::String const axis = isHorizontal ? "columns" : "rows";
     return "arrange: " + juce::String(static_cast<int>(objs.size()))
-           + " objects in " + juce::String(static_cast<int>(layers.size())) + " columns";
+           + " objects in " + juce::String(static_cast<int>(layers.size())) + " " + axis;
 }
 
 } // namespace RepentePd

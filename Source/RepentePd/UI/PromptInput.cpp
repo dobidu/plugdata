@@ -260,7 +260,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             pdInstance->logMessage(juce::String::fromUTF8(
                 "  /pds <cmd>       \xe2\x86\x92 pd-script  (/help pds)\n"
                 "  /lua <expr>      \xe2\x86\x92 Lua inline  (/help lua)\n"
-                "  /arrange         \xe2\x86\x92 arrange objects by signal flow\n"
+                "  /arrange [dir]   \xe2\x86\x92 arrange by signal flow (dir: left-right|right-left|top-down|bottom-up)\n"
                 "  /analyze <q>     \xe2\x86\x92 ask LLM, no execution\n"
                 "  /listen [prompt] \xe2\x86\x92 audio capture \xe2\x86\x92 spectral (no prompt=analyze)\n"
                 "  /history         \xe2\x86\x92 show turn count\n"
