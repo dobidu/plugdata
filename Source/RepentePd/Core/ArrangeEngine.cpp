@@ -25,8 +25,9 @@ ArrangeEngine::Direction ArrangeEngine::parseDirection(juce::String const& s)
     return Direction::LeftRight;
 }
 
-juce::String ArrangeEngine::arrange(Canvas* canvas, Direction dir)
+juce::String ArrangeEngine::arrange(Canvas* canvas, Direction dir, int step)
 {
+    step = std::max(40, step);
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
     if (canvas == nullptr)
@@ -85,8 +86,9 @@ juce::String ArrangeEngine::arrange(Canvas* canvas, Direction dir)
     if (auto patchPtr = canvas->patch.getPointer())
         canvas_dirty(patchPtr.get(), 1);
 
-    constexpr int MAIN_START = 60, MAIN_STEP = 130;
-    constexpr int CROSS_START = 60, CROSS_STEP = 70;
+    constexpr int MAIN_START = 60, CROSS_START = 60;
+    int const MAIN_STEP  = step;
+    int const CROSS_STEP = std::max(40, step * 70 / 130);
 
     bool const isHorizontal = (dir == Direction::LeftRight || dir == Direction::RightLeft);
     bool const isReversed   = (dir == Direction::RightLeft || dir == Direction::BottomUp);

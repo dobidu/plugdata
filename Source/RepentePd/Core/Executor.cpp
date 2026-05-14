@@ -267,10 +267,11 @@ void Executor::execute(CommandResult const& cmd,
 
         case CommandType::PDS_ARRANGE:
         {
-            auto dir = cmd.args.isEmpty()
-                         ? ArrangeEngine::Direction::LeftRight
-                         : ArrangeEngine::parseDirection(cmd.args[0]);
-            juce::String result = ArrangeEngine::arrange(canvas, dir);
+            auto dir  = cmd.args.isEmpty()
+                          ? ArrangeEngine::Direction::LeftRight
+                          : ArrangeEngine::parseDirection(cmd.args[0]);
+            int  step = cmd.args.size() >= 2 ? cmd.args[1].getIntValue() : 130;
+            juce::String result = ArrangeEngine::arrange(canvas, dir, step);
             if (onResult) onResult(result);
             break;
         }

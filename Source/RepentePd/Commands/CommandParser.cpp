@@ -30,9 +30,15 @@ CommandResult CommandParser::parse(juce::String const& input)
     if (trimmed.startsWithIgnoreCase("/arrange"))
     {
         result.type = CommandType::PDS_ARRANGE;
-        auto dir = trimmed.substring(8).trim(); // text after "/arrange"
-        if (dir.isNotEmpty())
-            result.args.add(dir);
+        auto rest = trimmed.substring(8).trim(); // text after "/arrange"
+        // split into direction and optional step: "/arrange top-down 80"
+        auto spaceIdx = rest.indexOfChar(' ');
+        if (spaceIdx < 0) {
+            if (rest.isNotEmpty()) result.args.add(rest);
+        } else {
+            result.args.add(rest.substring(0, spaceIdx).trim());
+            result.args.add(rest.substring(spaceIdx + 1).trim());
+        }
         return result;
     }
 

@@ -19,7 +19,7 @@ public:
 
     // Arrange all objects on canvas by signal-flow depth.
     // Returns a user-facing status string. Must be called on the message thread.
-    static juce::String arrange(Canvas* canvas, Direction dir = Direction::LeftRight);
+    static juce::String arrange(Canvas* canvas, Direction dir = Direction::LeftRight, int step = 130);
 };
 
 } // namespace RepentePd
