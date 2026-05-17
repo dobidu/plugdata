@@ -9,6 +9,7 @@
 #include "RepentePd/Commands/SugarExpander.h"
 #include "RepentePd/Bridge/Bridge.h"
 #include "RepentePd/Bridge/RepenteClient.h"
+#include "RepentePd/Bridge/PresetLoader.h"
 #include "RepentePd/Bridge/CanvasSerializer.h"
 #include "RepentePd/SpectralAnalyzer.h"
 #include "Utility/SettingsFile.h"
@@ -228,9 +229,15 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
         } else if (topic == "llm") {
             pdInstance->logRepente(juce::String::fromUTF8("LLM bridge  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
             pdInstance->logMessage(juce::String::fromUTF8(
-                "  /config url <url>           \xe2\x86\x92 set server (OpenAI-compat)\n"
+                "  /config preset <name>       \xe2\x86\x92 apply preset (url+provider+model)\n"
+                "  /config preset list         \xe2\x86\x92 list available presets\n"
+                "  /config preset export       \xe2\x86\x92 export defaults to user file for editing\n"
+                "  /config preset reload       \xe2\x86\x92 reload user preset file\n"
+                "  /config provider openai|anthropic|auto\n"
+                "  /config url <url>           \xe2\x86\x92 set server URL\n"
                 "  /config model <name>        \xe2\x86\x92 set model\n"
-                "  /config key <key>           \xe2\x86\x92 set API key (stored)\n"
+                "  /config maxtokens <N>       \xe2\x86\x92 set max response tokens (default 4096)\n"
+                "  /config key <key>           \xe2\x86\x92 set API key (current provider)\n"
                 "  /config history on|off      \xe2\x86\x92 persist history across sessions\n"
                 "  /config autoplace on|off    \xe2\x86\x92 cursor placement (off = LLM coords)\n"
                 "  /config test                \xe2\x86\x92 ping server\n"
@@ -243,17 +250,16 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  /history clear       \xe2\x86\x92 wipe conversation history\n"
                 "  <free text>          \xe2\x86\x92 generate patch (auto-detected + executed)\n"
                 "\n"
-                "  Backends:\n"
-                "    Ollama (local, free):\n"
-                "      /config url http://localhost:11434\n"
-                "      /config model llama3.2\n"
-                "    OpenAI:\n"
-                "      /config url https://api.openai.com\n"
-                "      /config key sk-...\n"
-                "      /config model gpt-4o\n"
-                "    repente server:\n"
-                "      /config url http://localhost:7860\n"
+                "  Quick backends (preset):\n"
+                "    Ollama (local):        /config preset ollama\n"
+                "    repente server:        /config preset repente\n"
+                "    Claude Opus 4.7:       /config preset claude-opus     + /config key sk-ant-...\n"
+                "    Claude Sonnet 4.6:     /config preset claude-sonnet   + /config key sk-ant-...\n"
+                "    Claude Haiku 4.5:      /config preset claude-haiku    + /config key sk-ant-...\n"
+                "    GPT-4o:                /config preset gpt-4o          + /config key sk-...\n"
                 "\n"
+                "  Custom presets: edit ~/.config/plugdata/repente_presets.json\n"
+                "  (or run /config preset export to seed it with defaults).\n"
                 "  Settings persist across sessions."));
         } else if (topic == "commands") {
             pdInstance->logRepente(juce::String::fromUTF8("Commands  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
@@ -372,28 +378,52 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
     if (msg.startsWith("/config")) {
         auto args = msg.substring(7).trim();
 
+        auto applyConfig = [this](RepentePd::RepenteClient::Config&& cfg) {
+            if (bridge) bridge->setConfig(std::move(cfg));
+        };
+        auto currentKeyProperty = [](RepentePd::RepenteClient::Provider p) {
+            return p == RepentePd::RepenteClient::Provider::Anthropic
+                       ? "repente_anthropic_key" : "repente_openai_key";
+        };
+        auto inferProviderFromUrl = [](juce::String const& url) {
+            return url.containsIgnoreCase("anthropic.com")
+                       ? RepentePd::RepenteClient::Provider::Anthropic
+                       : RepentePd::RepenteClient::Provider::OpenAI;
+        };
+        auto urlIsLocal = [](juce::String const& url) {
+            auto u = url.trim().toLowerCase();
+            return u.startsWith("http://localhost")
+                || u.startsWith("http://127.0.0.1")
+                || u.startsWith("https://localhost")
+                || u.startsWith("https://127.0.0.1");
+        };
+
         if (args.isEmpty()) {
             auto const& cfg = bridge ? bridge->getConfig()
                                      : RepentePd::RepenteClient::Config{};
-            juce::String masked = cfg.apiKey.isNotEmpty() ? "****" : "(not set)";
-            bool const persist    = SettingsFile::getInstance()->getProperty<bool>("repente_persist_history");
-            bool const autoplace  = SettingsFile::getInstance()->getProperty<bool>("repente_autoplace");
-            // URL backend hint
+            auto* sf = SettingsFile::getInstance();
+            juce::String openaiKey    = sf->hasProperty("repente_openai_key")    ? sf->getProperty<juce::String>("repente_openai_key")    : juce::String();
+            juce::String anthropicKey = sf->hasProperty("repente_anthropic_key") ? sf->getProperty<juce::String>("repente_anthropic_key") : juce::String();
+            bool const persist    = sf->getProperty<bool>("repente_persist_history");
+            bool const autoplace  = sf->getProperty<bool>("repente_autoplace");
+
             juce::String urlNote;
-            if (cfg.url.contains("11434"))
-                urlNote = "  (Ollama)";
-            else if (cfg.url.contains("7860"))
-                urlNote = "  (repente server)";
-            else if (!cfg.url.startsWithIgnoreCase("http://localhost")
-                  && !cfg.url.startsWithIgnoreCase("http://127.0.0.1"))
-                urlNote = juce::String::fromUTF8("  (\xe2\x9a\xa0 remote)");
+            if (cfg.url.contains("11434"))                                urlNote = "  (Ollama)";
+            else if (cfg.url.contains("7860"))                            urlNote = "  (repente server)";
+            else if (cfg.url.containsIgnoreCase("anthropic.com"))         urlNote = juce::String::fromUTF8("  (\xe2\x9a\xa0 Anthropic)");
+            else if (cfg.url.containsIgnoreCase("openai.com"))            urlNote = juce::String::fromUTF8("  (\xe2\x9a\xa0 OpenAI)");
+            else if (!urlIsLocal(cfg.url))                                urlNote = juce::String::fromUTF8("  (\xe2\x9a\xa0 remote)");
+
             pdInstance->logRepente("repente config");
             pdInstance->logMessage(
-                "  url:       " + cfg.url + urlNote + "\n"
-                "  model:     " + cfg.model + "\n"
-                "  key:       " + masked + "\n"
-                "  history:   " + juce::String(persist ? "persist" : "session-only (default)") + "\n"
-                "  autoplace: " + juce::String(autoplace ? "on (default)" : "off"));
+                "  provider:   " + RepentePd::RepenteClient::providerToString(cfg.provider) + "\n"
+                "  url:        " + cfg.url + urlNote + "\n"
+                "  model:      " + cfg.model + "\n"
+                "  maxtokens:  " + juce::String(cfg.maxTokens) + "\n"
+                "  openai key:    " + juce::String(openaiKey.isNotEmpty()    ? "****" : "(not set)") + "\n"
+                "  anthropic key: " + juce::String(anthropicKey.isNotEmpty() ? "****" : "(not set)") + "\n"
+                "  history:    " + juce::String(persist ? "persist" : "session-only (default)") + "\n"
+                "  autoplace:  " + juce::String(autoplace ? "on (default)" : "off"));
             return {};
         }
 
@@ -404,16 +434,10 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             if (bridge) {
                 auto cfg = bridge->getConfig();
                 cfg.url = newUrl;
-                bridge->setConfig(std::move(cfg));
+                applyConfig(std::move(cfg));
             }
             pdInstance->logRepente(juce::String::fromUTF8("repente: url \xe2\x86\x92 ") + newUrl);
-            // Privacy warning for non-localhost URLs
-            auto const urlLower = newUrl.trim().toLowerCase();
-            bool const isLocal = urlLower.startsWith("http://localhost")
-                              || urlLower.startsWith("http://127.0.0.1")
-                              || urlLower.startsWith("https://localhost")
-                              || urlLower.startsWith("https://127.0.0.1");
-            if (!isLocal)
+            if (!urlIsLocal(newUrl))
                 pdInstance->logMessage(juce::String::fromUTF8(
                     "  \xe2\x9a\xa0  remote URL: canvas patch data will be sent to this server"));
             return {};
@@ -426,7 +450,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             if (bridge) {
                 auto cfg = bridge->getConfig();
                 cfg.model = newModel;
-                bridge->setConfig(std::move(cfg));
+                applyConfig(std::move(cfg));
             }
             pdInstance->logRepente(juce::String::fromUTF8("repente: model \xe2\x86\x92 ") + newModel);
             return {};
@@ -434,14 +458,132 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
 
         if (args.startsWith("key ")) {
             juce::String newKey = args.substring(4).trim();
-            SettingsFile::getInstance()->setProperty("repente_key", newKey);
+            auto provider = bridge ? bridge->getConfig().provider
+                                   : RepentePd::RepenteClient::Provider::OpenAI;
+            SettingsFile::getInstance()->setProperty(currentKeyProperty(provider), newKey);
             SettingsFile::getInstance()->saveSettings();
             if (bridge) {
                 auto cfg = bridge->getConfig();
                 cfg.apiKey = newKey;
-                bridge->setConfig(std::move(cfg));
+                applyConfig(std::move(cfg));
             }
-            pdInstance->logRepente("repente: api key set (masked)");
+            pdInstance->logRepente("repente: " + RepentePd::RepenteClient::providerToString(provider)
+                                   + " api key set (masked)");
+            return {};
+        }
+
+        if (args.startsWith("provider ")) {
+            juce::String want = args.substring(9).trim().toLowerCase();
+            auto provider = RepentePd::RepenteClient::Provider::OpenAI;
+            if (want == "auto") {
+                provider = inferProviderFromUrl(bridge ? bridge->getConfig().url : juce::String());
+            } else if (want == "anthropic") {
+                provider = RepentePd::RepenteClient::Provider::Anthropic;
+            } else if (want == "openai") {
+                provider = RepentePd::RepenteClient::Provider::OpenAI;
+            } else {
+                pdInstance->logMessage("usage: /config provider openai|anthropic|auto");
+                return {};
+            }
+            auto* sf = SettingsFile::getInstance();
+            sf->setProperty("repente_provider", RepentePd::RepenteClient::providerToString(provider));
+            // Auto-load matching per-provider key.
+            juce::String key = sf->hasProperty(currentKeyProperty(provider))
+                                   ? sf->getProperty<juce::String>(currentKeyProperty(provider)) : juce::String();
+            sf->saveSettings();
+            if (bridge) {
+                auto cfg = bridge->getConfig();
+                cfg.provider = provider;
+                cfg.apiKey   = key;
+                applyConfig(std::move(cfg));
+            }
+            pdInstance->logRepente(juce::String::fromUTF8("repente: provider \xe2\x86\x92 ")
+                                   + RepentePd::RepenteClient::providerToString(provider));
+            return {};
+        }
+
+        if (args.startsWith("maxtokens ")) {
+            int n = args.substring(10).trim().getIntValue();
+            if (n <= 0) {
+                pdInstance->logMessage("usage: /config maxtokens <positive integer>");
+                return {};
+            }
+            SettingsFile::getInstance()->setProperty("repente_max_tokens", n);
+            SettingsFile::getInstance()->saveSettings();
+            if (bridge) {
+                auto cfg = bridge->getConfig();
+                cfg.maxTokens = n;
+                applyConfig(std::move(cfg));
+            }
+            pdInstance->logRepente(juce::String::fromUTF8("repente: maxtokens \xe2\x86\x92 ") + juce::String(n));
+            return {};
+        }
+
+        if (args.startsWith("preset ")) {
+            juce::String sub = args.substring(7).trim();
+            if (sub == "list") {
+                auto presets = RepentePd::PresetLoader::loadAll();
+                pdInstance->logRepente("available presets (" + juce::String((int)presets.size()) + ")");
+                for (auto const& p : presets) {
+                    juce::String keyHint = p.keyEnv.isNotEmpty() ? "  [key: " + p.keyEnv + "]" : "";
+                    pdInstance->logMessage("  " + p.name.paddedRight(' ', 16)
+                                           + p.description + keyHint);
+                }
+                pdInstance->logMessage("  apply: /config preset <name>");
+                return {};
+            }
+            if (sub == "export") {
+                juce::String err;
+                if (RepentePd::PresetLoader::writeDefaultsToUser(err))
+                    pdInstance->logRepente("repente: presets exported to "
+                                           + RepentePd::PresetLoader::userFile().getFullPathName());
+                else
+                    pdInstance->logError("repente: export failed — " + err);
+                return {};
+            }
+            if (sub == "reload") {
+                auto presets = RepentePd::PresetLoader::loadAll();
+                pdInstance->logRepente("repente: presets reloaded (" + juce::String((int)presets.size()) + ")");
+                return {};
+            }
+            bool found = false;
+            auto preset = RepentePd::PresetLoader::findOrEmpty(sub, found);
+            if (!found) {
+                pdInstance->logError("repente: preset not found: " + sub
+                                     + "  (try /config preset list)");
+                return {};
+            }
+            auto provider = RepentePd::RepenteClient::providerFromString(preset.provider);
+            auto* sf = SettingsFile::getInstance();
+            sf->setProperty("repente_url",         preset.url);
+            sf->setProperty("repente_provider",    RepentePd::RepenteClient::providerToString(provider));
+            sf->setProperty("repente_model",       preset.model);
+            sf->setProperty("repente_max_tokens",  preset.maxTokens);
+            juce::String key = sf->hasProperty(currentKeyProperty(provider))
+                                   ? sf->getProperty<juce::String>(currentKeyProperty(provider)) : juce::String();
+            sf->saveSettings();
+            if (bridge) {
+                auto cfg = bridge->getConfig();
+                cfg.url       = preset.url;
+                cfg.provider  = provider;
+                cfg.model     = preset.model;
+                cfg.maxTokens = preset.maxTokens;
+                cfg.apiKey    = key;
+                applyConfig(std::move(cfg));
+            }
+            pdInstance->logRepente("repente: preset → " + preset.name
+                                   + "  (" + preset.url + ", model=" + preset.model + ")");
+            if (preset.requiresKey && key.isEmpty()) {
+                juce::String hint = preset.keyEnv.isNotEmpty()
+                                        ? "  expected env: " + preset.keyEnv
+                                        : "";
+                pdInstance->logMessage(juce::String::fromUTF8(
+                    "  \xe2\x9a\xa0  this preset requires an API key — set via `/config key <key>`")
+                    + hint);
+            }
+            if (!urlIsLocal(preset.url))
+                pdInstance->logMessage(juce::String::fromUTF8(
+                    "  \xe2\x9a\xa0  remote URL: canvas patch data will be sent to this server"));
             return {};
         }
 
@@ -481,13 +623,19 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
 
         pdInstance->logMessage(juce::String::fromUTF8(
             "usage:\n"
-            "  /config                     \xe2\x86\x92 show current config\n"
-            "  /config url <url>           \xe2\x86\x92 set server URL\n"
-            "  /config model <name>        \xe2\x86\x92 set model name\n"
-            "  /config key <key>           \xe2\x86\x92 set API key\n"
-            "  /config history on|off      \xe2\x86\x92 persist history across sessions\n"
-            "  /config autoplace on|off    \xe2\x86\x92 cursor placement (off = use LLM coords)\n"
-            "  /config test                \xe2\x86\x92 test server connection"));
+            "  /config                          \xe2\x86\x92 show current config\n"
+            "  /config preset list              \xe2\x86\x92 list available presets\n"
+            "  /config preset <name>            \xe2\x86\x92 apply preset (url+provider+model)\n"
+            "  /config preset export            \xe2\x86\x92 write defaults to user file for editing\n"
+            "  /config preset reload            \xe2\x86\x92 reload user preset file\n"
+            "  /config provider openai|anthropic|auto\n"
+            "  /config url <url>                \xe2\x86\x92 set server URL\n"
+            "  /config model <name>             \xe2\x86\x92 set model name\n"
+            "  /config maxtokens <N>            \xe2\x86\x92 set max response tokens\n"
+            "  /config key <key>                \xe2\x86\x92 set API key (current provider)\n"
+            "  /config history on|off           \xe2\x86\x92 persist history across sessions\n"
+            "  /config autoplace on|off         \xe2\x86\x92 cursor placement (off = use LLM coords)\n"
+            "  /config test                     \xe2\x86\x92 test server connection"));
         return {};
     }
 

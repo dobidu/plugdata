@@ -2,8 +2,12 @@
 
 #include "RepentePd/Commands/CommandParser.h"
 #include "RepentePd/Bridge/PdParser.h"
+#include "RepentePd/Bridge/OpenAIProvider.h"
+#include "RepentePd/Bridge/AnthropicProvider.h"
+#include "RepentePd/Bridge/PresetLoader.h"
 #include "RepentePd/SpectralAnalyzer.h"
 #include <cmath>
+#include <nlohmann/json.hpp>
 
 using namespace RepentePd;
 
@@ -438,3 +442,289 @@ public:
 };
 
 static SpectralAnalyzerTest spectralAnalyzerTest;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OpenAIProvider — body/header/parse
+// ─────────────────────────────────────────────────────────────────────────────
+
+class OpenAIProviderTest : public UnitTest {
+public:
+    OpenAIProviderTest() : UnitTest("OpenAIProvider", "RepentePd") {}
+
+    void runTest() override
+    {
+        using json = nlohmann::json;
+        OpenAIProvider p;
+
+        beginTest("endpoints + name");
+        expect(p.name() == "openai");
+        expect(p.chatEndpointPath() == "/v1/chat/completions");
+        expect(p.pingEndpointPath() == "/v1/models");
+
+        beginTest("buildHeaders: no key → no Authorization");
+        {
+            std::vector<std::pair<std::string, std::string>> h;
+            p.buildHeaders("", h);
+            bool hasAuth = false;
+            for (auto const& kv : h) if (kv.first == "Authorization") hasAuth = true;
+            expect(!hasAuth, "no Authorization header when key empty");
+        }
+
+        beginTest("buildHeaders: with key → Bearer auth");
+        {
+            std::vector<std::pair<std::string, std::string>> h;
+            p.buildHeaders("sk-test", h);
+            bool found = false;
+            for (auto const& kv : h)
+                if (kv.first == "Authorization" && kv.second == "Bearer sk-test") found = true;
+            expect(found, "Bearer sk-test present");
+        }
+
+        beginTest("buildBody: shape unchanged from pre-refactor");
+        {
+            LlmRequest req;
+            req.model     = "gpt-4o";
+            req.maxTokens = 0;     // OpenAI: omit when 0
+            req.messages  = {{"system", "you are helpful"}, {"user", "hi"}};
+            json body = json::parse(p.buildBody(req));
+            expect(body["model"] == "gpt-4o", "model preserved");
+            expect(body["messages"].is_array() && body["messages"].size() == 2, "2 messages");
+            expect(body["messages"][0]["role"] == "system", "system stays in array");
+            expect(body["messages"][1]["role"] == "user",   "user message follows");
+            expect(body.contains("stream") && body["stream"] == false, "stream:false");
+            expect(!body.contains("max_tokens"), "max_tokens omitted when 0");
+        }
+
+        beginTest("buildBody: max_tokens included when > 0");
+        {
+            LlmRequest req;
+            req.model     = "gpt-4o";
+            req.maxTokens = 1024;
+            req.messages  = {{"user", "hi"}};
+            json body = json::parse(p.buildBody(req));
+            expect(body.contains("max_tokens") && body["max_tokens"] == 1024);
+        }
+
+        beginTest("parseResponse: success");
+        {
+            std::string body = R"({"choices":[{"message":{"content":"hello"}}]})";
+            expect(p.parseResponse(body) == "hello");
+        }
+
+        beginTest("parseResponse: API error surfaced");
+        {
+            std::string body = R"({"error":{"message":"invalid key","type":"auth"}})";
+            auto r = p.parseResponse(body);
+            expect(r.startsWith("error:"));
+            expect(r.contains("invalid key"));
+        }
+
+        beginTest("parseResponse: malformed JSON");
+        {
+            auto r = p.parseResponse("not json {");
+            expect(r.startsWith("error:"));
+            expect(r.contains("invalid JSON"));
+        }
+
+        beginTest("parsePingResponse: 200 with data → models count");
+        {
+            bool ok = false;
+            auto msg = p.parsePingResponse(R"({"data":[{"id":"a"},{"id":"b"}]})", 200, ok);
+            expect(ok);
+            expect(msg.contains("2"));
+        }
+
+        beginTest("parsePingResponse: non-200 → ok=false");
+        {
+            bool ok = true;
+            auto msg = p.parsePingResponse("", 401, ok);
+            expect(!ok);
+            expect(msg.contains("401"));
+        }
+    }
+};
+static OpenAIProviderTest openAIProviderTest;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AnthropicProvider — body/header/parse
+// ─────────────────────────────────────────────────────────────────────────────
+
+class AnthropicProviderTest : public UnitTest {
+public:
+    AnthropicProviderTest() : UnitTest("AnthropicProvider", "RepentePd") {}
+
+    void runTest() override
+    {
+        using json = nlohmann::json;
+        AnthropicProvider p;
+
+        beginTest("endpoints + name");
+        expect(p.name() == "anthropic");
+        expect(p.chatEndpointPath() == "/v1/messages");
+
+        beginTest("buildHeaders: x-api-key + anthropic-version");
+        {
+            std::vector<std::pair<std::string, std::string>> h;
+            p.buildHeaders("sk-ant-test", h);
+            bool hasKey = false, hasVer = false, hasNoBearer = true;
+            for (auto const& kv : h) {
+                if (kv.first == "x-api-key" && kv.second == "sk-ant-test")              hasKey = true;
+                if (kv.first == "anthropic-version" && !kv.second.empty())              hasVer = true;
+                if (kv.first == "Authorization")                                        hasNoBearer = false;
+            }
+            expect(hasKey, "x-api-key present");
+            expect(hasVer, "anthropic-version present");
+            expect(hasNoBearer, "no Authorization header (Anthropic uses x-api-key)");
+        }
+
+        beginTest("buildBody: system extracted from messages → top-level");
+        {
+            LlmRequest req;
+            req.model     = "claude-sonnet-4-6";
+            req.maxTokens = 2048;
+            req.messages  = {{"system", "canvas state"}, {"user", "make sine"}};
+            json body = json::parse(p.buildBody(req));
+            expect(body.contains("system"), "system field at top level");
+            expect(body["system"] == "canvas state");
+            expect(body["messages"].is_array() && body["messages"].size() == 1,
+                   "only user message in messages array");
+            expect(body["messages"][0]["role"] == "user");
+            expect(body.contains("max_tokens") && body["max_tokens"] == 2048,
+                   "max_tokens REQUIRED");
+        }
+
+        beginTest("buildBody: multiple system messages concatenated");
+        {
+            LlmRequest req;
+            req.model    = "claude-opus-4-7";
+            req.messages = {{"system", "alpha"}, {"system", "beta"}, {"user", "hi"}};
+            json body = json::parse(p.buildBody(req));
+            std::string sys = body["system"].get<std::string>();
+            expect(sys.find("alpha") != std::string::npos);
+            expect(sys.find("beta")  != std::string::npos);
+            expect(body["messages"].size() == 1);
+        }
+
+        beginTest("buildBody: consecutive same-role messages collapsed");
+        {
+            LlmRequest req;
+            req.model    = "claude-haiku-4-5-20251001";
+            req.messages = {{"user", "first"}, {"user", "second"}, {"assistant", "ok"}};
+            json body = json::parse(p.buildBody(req));
+            expect(body["messages"].size() == 2, "consecutive users collapsed");
+            std::string c0 = body["messages"][0]["content"].get<std::string>();
+            expect(c0.find("first")  != std::string::npos);
+            expect(c0.find("second") != std::string::npos);
+        }
+
+        beginTest("buildBody: max_tokens defaults to 4096 when unset");
+        {
+            LlmRequest req;
+            req.model    = "claude-sonnet-4-6";
+            req.maxTokens = 0;
+            req.messages = {{"user", "hi"}};
+            json body = json::parse(p.buildBody(req));
+            expect(body["max_tokens"] == 4096, "default when 0");
+        }
+
+        beginTest("parseResponse: text block extracted");
+        {
+            std::string body = R"({"content":[{"type":"text","text":"hello world"}]})";
+            expect(p.parseResponse(body) == "hello world");
+        }
+
+        beginTest("parseResponse: multiple text blocks concatenated");
+        {
+            std::string body = R"({"content":[
+                {"type":"text","text":"alpha "},
+                {"type":"text","text":"beta"}
+            ]})";
+            auto r = p.parseResponse(body);
+            expect(r.contains("alpha"));
+            expect(r.contains("beta"));
+        }
+
+        beginTest("parseResponse: API error → readable message");
+        {
+            std::string body = R"({"type":"error","error":{"type":"invalid_request_error","message":"bad model"}})";
+            auto r = p.parseResponse(body);
+            expect(r.startsWith("error:"));
+            expect(r.contains("bad model"));
+        }
+
+        beginTest("parseResponse: malformed JSON");
+        {
+            auto r = p.parseResponse("not json");
+            expect(r.startsWith("error:"));
+        }
+    }
+};
+static AnthropicProviderTest anthropicProviderTest;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PresetLoader — defaults + parse + merge
+// ─────────────────────────────────────────────────────────────────────────────
+
+class PresetLoaderTest : public UnitTest {
+public:
+    PresetLoaderTest() : UnitTest("PresetLoader", "RepentePd") {}
+
+    static Preset const* findInList(std::vector<Preset> const& v, juce::String const& name)
+    {
+        for (auto const& p : v) if (p.name == name) return &p;
+        return nullptr;
+    }
+
+    void runTest() override
+    {
+        beginTest("bundled defaults parse cleanly");
+        {
+            auto defaults = PresetLoader::loadAll();
+            expect(defaults.size() >= 6, "at least 6 default presets");
+            expect(findInList(defaults, "claude-opus")   != nullptr, "claude-opus present");
+            expect(findInList(defaults, "claude-sonnet") != nullptr, "claude-sonnet present");
+            expect(findInList(defaults, "claude-haiku")  != nullptr, "claude-haiku present");
+            expect(findInList(defaults, "gpt-4o")        != nullptr, "gpt-4o present");
+            expect(findInList(defaults, "ollama")        != nullptr, "ollama present");
+            expect(findInList(defaults, "repente")       != nullptr, "repente present");
+        }
+
+        beginTest("default Claude presets carry expected model IDs");
+        {
+            auto defaults = PresetLoader::loadAll();
+            auto* opus    = findInList(defaults, "claude-opus");
+            auto* sonnet  = findInList(defaults, "claude-sonnet");
+            auto* haiku   = findInList(defaults, "claude-haiku");
+            if (opus)   expect(opus->model.contains("opus-4-7"),         "opus model id");
+            if (sonnet) expect(sonnet->model.contains("sonnet-4-6"),     "sonnet model id");
+            if (haiku)  expect(haiku->model.contains("haiku-4-5"),       "haiku model id");
+            if (opus)   expect(opus->provider == "anthropic");
+            if (opus)   expect(opus->keyEnv   == "ANTHROPIC_API_KEY");
+            if (opus)   expect(opus->requiresKey == true);
+        }
+
+        beginTest("find for known + unknown");
+        {
+            bool found = false;
+            auto p = PresetLoader::findOrEmpty("claude-sonnet", found);
+            expect(found);
+            expect(p.url.containsIgnoreCase("anthropic.com"));
+
+            bool foundNo = true;
+            auto missing = PresetLoader::findOrEmpty("does-not-exist", foundNo);
+            expect(!foundNo);
+            expect(missing.name.isEmpty());
+        }
+
+        beginTest("local presets are localhost");
+        {
+            auto defaults = PresetLoader::loadAll();
+            auto* ollama  = findInList(defaults, "ollama");
+            auto* repente = findInList(defaults, "repente");
+            if (ollama)  expect(ollama->url.contains("localhost"));
+            if (repente) expect(repente->url.contains("localhost"));
+            if (ollama)  expect(!ollama->requiresKey);
+        }
+    }
+};
+static PresetLoaderTest presetLoaderTest;

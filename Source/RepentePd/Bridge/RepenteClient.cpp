@@ -5,20 +5,93 @@
 
 #include "Utility/Config.h"
 #include "RepenteClient.h"
+#include "OpenAIProvider.h"
+#include "AnthropicProvider.h"
 
-// httplib and json included only in .cpp to keep compile times manageable.
 #include <cpp-httplib/httplib.h>
-#include <nlohmann/json.hpp>
-
 #include <thread>
-
-using json = nlohmann::json;
 
 namespace RepentePd {
 
-RepenteClient::RepenteClient(Config cfg) : config(std::move(cfg)) {}
+namespace {
 
-void RepenteClient::setConfig(Config cfg) { config = std::move(cfg); }
+struct ParsedUrl {
+    std::string host;
+    std::string pathPrefix;
+    int  port    = 80;
+    bool useHttps = false;
+};
+
+ParsedUrl parseUrl(juce::String const& urlIn)
+{
+    ParsedUrl out;
+    juce::String url = urlIn;
+    if (url.endsWithChar('/')) url = url.dropLastCharacters(1);
+
+    out.useHttps = url.startsWithIgnoreCase("https://");
+    juce::String hostPart = out.useHttps ? url.substring(8) : url.substring(7);
+    out.port = out.useHttps ? 443 : 80;
+
+    int const slashPos = hostPart.indexOf("/");
+    if (slashPos >= 0) {
+        out.pathPrefix = hostPart.substring(slashPos).toStdString();
+        hostPart = hostPart.substring(0, slashPos);
+    }
+
+    int const colonPos = hostPart.lastIndexOf(":");
+    if (colonPos >= 0) {
+        out.port = hostPart.substring(colonPos + 1).getIntValue();
+        hostPart = hostPart.substring(0, colonPos);
+    }
+
+    out.host = hostPart.toStdString();
+    return out;
+}
+
+auto toHttpLibHeaders(std::vector<std::pair<std::string, std::string>> const& src)
+{
+    httplib::Headers h;
+    for (auto const& p : src) h.emplace(p.first, p.second);
+    return h;
+}
+
+} // namespace
+
+RepenteClient::RepenteClient(Config cfg) : config(std::move(cfg))
+{
+    provider = makeProvider(config.provider);
+}
+
+void RepenteClient::setConfig(Config cfg)
+{
+    bool const providerChanged = (cfg.provider != config.provider) || !provider;
+    config = std::move(cfg);
+    if (providerChanged)
+        provider = makeProvider(config.provider);
+}
+
+std::shared_ptr<ILlmProvider> RepenteClient::makeProvider(Provider p)
+{
+    switch (p) {
+        case Provider::Anthropic: return std::make_shared<AnthropicProvider>();
+        case Provider::OpenAI:
+        default:                  return std::make_shared<OpenAIProvider>();
+    }
+}
+
+juce::String RepenteClient::providerToString(Provider p)
+{
+    switch (p) {
+        case Provider::Anthropic: return "anthropic";
+        case Provider::OpenAI:    return "openai";
+    }
+    return "openai";
+}
+
+RepenteClient::Provider RepenteClient::providerFromString(juce::String const& s)
+{
+    return s.equalsIgnoreCase("anthropic") ? Provider::Anthropic : Provider::OpenAI;
+}
 
 bool RepenteClient::send(std::vector<Message> const& messages,
                          std::function<void(juce::String)> callback)
@@ -30,75 +103,45 @@ bool RepenteClient::send(std::vector<Message> const& messages,
         return false;
     }
 
-    auto cfg       = config;
-    auto* busy_    = &busy;
-    auto  token    = cancelled;
+    auto cfg    = config;
+    auto prov   = provider;          // shared_ptr keeps provider alive while detached thread runs
+    auto* busy_ = &busy;
+    auto  token = cancelled;
 
-    std::thread([cfg, messages = messages, cb = std::move(callback), busy_, token]() mutable {
+    std::thread([cfg, messages, prov, cb = std::move(callback), busy_, token]() mutable {
         juce::String result;
         try {
-            // Parse URL into components
-            juce::String url = cfg.url;
-            if (url.endsWithChar('/')) url = url.dropLastCharacters(1);
+            auto const parsed = parseUrl(cfg.url);
 
-            bool useHttps = url.startsWithIgnoreCase("https://");
-            juce::String host = useHttps ? url.substring(8) : url.substring(7);
+            LlmRequest req;
+            req.messages   = messages;
+            req.model      = cfg.model;
+            req.apiKey     = cfg.apiKey;
+            req.maxTokens  = cfg.maxTokens;
+            req.timeoutSec = cfg.timeoutSec;
 
-            juce::String pathPrefix;
-            int port = useHttps ? 443 : 80;
+            std::string const endpoint = parsed.pathPrefix + prov->chatEndpointPath().toStdString();
+            std::string const bodyStr  = prov->buildBody(req);
 
-            // Extract optional /path prefix before port parsing
-            int slashPos = host.indexOf("/");
-            if (slashPos >= 0) {
-                pathPrefix = host.substring(slashPos);
-                host = host.substring(0, slashPos);
-            }
+            std::vector<std::pair<std::string, std::string>> hdrs;
+            prov->buildHeaders(cfg.apiKey, hdrs);
 
-            // Extract optional :port
-            int colonPos = host.lastIndexOf(":");
-            if (colonPos >= 0) {
-                port = host.substring(colonPos + 1).getIntValue();
-                host = host.substring(0, colonPos);
-            }
-
-            std::string endpoint = (pathPrefix + "/v1/chat/completions").toStdString();
-
-            json messages_json = json::array();
-            for (auto const& m : messages)
-                messages_json.push_back({{"role",    m.role.toStdString()},
-                                         {"content", m.content.toStdString()}});
-
-            json body = {
-                {"model",    cfg.model.toStdString()},
-                {"messages", messages_json},
-                {"stream",   false}
-            };
-            std::string bodyStr = body.dump();
-
-            httplib::Client cli(host.toStdString(), port);
+            httplib::Client cli(parsed.host, parsed.port);
             cli.set_connection_timeout(cfg.timeoutSec);
             cli.set_read_timeout(cfg.timeoutSec);
 
-            httplib::Headers headers = {
-                {"Content-Type", "application/json"},
-                {"Accept",       "application/json"}
-            };
-            if (cfg.apiKey.isNotEmpty())
-                headers.emplace("Authorization", "Bearer " + cfg.apiKey.toStdString());
-
-            auto res = cli.Post(endpoint, headers, bodyStr, "application/json");
+            auto res = cli.Post(endpoint, toHttpLibHeaders(hdrs), bodyStr, "application/json");
 
             if (!res) {
                 result = "error: " + juce::String(httplib::to_string(res.error()).c_str());
             } else if (res->status != 200) {
-                result = "error: HTTP " + juce::String(res->status);
+                // Let provider extract structured error message from body.
+                auto parsedErr = prov->parseResponse(res->body);
+                result = parsedErr.startsWith("error:")
+                             ? parsedErr
+                             : "error: HTTP " + juce::String(res->status);
             } else {
-                json resp = json::parse(res->body, nullptr, /*allow_exceptions=*/false);
-                if (resp.is_discarded())
-                    result = "error: invalid JSON response";
-                else
-                    result = juce::String(resp["choices"][0]["message"]["content"]
-                                             .get<std::string>().c_str());
+                result = prov->parseResponse(res->body);
             }
         }
         catch (std::exception const& e) {
@@ -121,56 +164,28 @@ bool RepenteClient::send(std::vector<Message> const& messages,
 void RepenteClient::ping(std::function<void(bool, juce::String)> callback)
 {
     auto cfg   = config;
+    auto prov  = provider;
     auto token = cancelled;
 
-    std::thread([cfg, cb = std::move(callback), token]() mutable {
+    std::thread([cfg, prov, cb = std::move(callback), token]() mutable {
         bool ok = false;
         juce::String msg;
         try {
-            juce::String url = cfg.url;
-            if (url.endsWithChar('/')) url = url.dropLastCharacters(1);
+            auto const parsed = parseUrl(cfg.url);
+            std::string const endpoint = parsed.pathPrefix + prov->pingEndpointPath().toStdString();
 
-            bool useHttps = url.startsWithIgnoreCase("https://");
-            juce::String host = useHttps ? url.substring(8) : url.substring(7);
+            std::vector<std::pair<std::string, std::string>> hdrs;
+            prov->buildHeaders(cfg.apiKey, hdrs);
 
-            juce::String pathPrefix;
-            int port = useHttps ? 443 : 80;
-
-            int slashPos = host.indexOf("/");
-            if (slashPos >= 0) {
-                pathPrefix = host.substring(slashPos);
-                host = host.substring(0, slashPos);
-            }
-
-            int colonPos = host.lastIndexOf(":");
-            if (colonPos >= 0) {
-                port = host.substring(colonPos + 1).getIntValue();
-                host = host.substring(0, colonPos);
-            }
-
-            std::string endpoint = (pathPrefix + "/v1/models").toStdString();
-
-            httplib::Client cli(host.toStdString(), port);
+            httplib::Client cli(parsed.host, parsed.port);
             cli.set_connection_timeout(5);
             cli.set_read_timeout(5);
 
-            httplib::Headers headers;
-            if (cfg.apiKey.isNotEmpty())
-                headers.emplace("Authorization", "Bearer " + cfg.apiKey.toStdString());
-
-            auto res = cli.Get(endpoint, headers);
-
+            auto res = cli.Get(endpoint, toHttpLibHeaders(hdrs));
             if (!res) {
                 msg = juce::String(httplib::to_string(res.error()).c_str());
-            } else if (res->status == 200) {
-                ok = true;
-                json j = json::parse(res->body, nullptr, false);
-                if (!j.is_discarded() && j.contains("data"))
-                    msg = "models available: " + juce::String((int)j["data"].size());
-                else
-                    msg = "connected (status 200)";
             } else {
-                msg = "HTTP " + juce::String(res->status);
+                msg = prov->parsePingResponse(res->body, res->status, ok);
             }
         }
         catch (std::exception const& e) { msg = juce::String(e.what()); }

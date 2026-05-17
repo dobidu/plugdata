@@ -14,7 +14,7 @@
 
 The LLM is context-aware: every request includes the current canvas state as a system message in pd-file format, so the model knows what is already on the canvas before generating anything new. You can build on existing patches incrementally, ask questions about them, or generate from scratch.
 
-`pd-repente` is **local-first**. It works with any OpenAI-compatible server — Ollama, llama-server, LM Studio, or the OpenAI API — and defaults to `localhost`. No data leaves your machine unless you explicitly point it at a remote endpoint. Ollama is auto-detected on first launch with no configuration required.
+`pd-repente` is **local-first**. It works with any OpenAI-compatible server — Ollama, llama-server, LM Studio, OpenAI, OpenRouter, Together, Groq — **and with the Anthropic API natively** (Claude Opus / Sonnet / Haiku). It defaults to `localhost`. No data leaves your machine unless you explicitly point it at a remote endpoint. Ollama is auto-detected on first launch with no configuration required.
 
 ### The C3 Tríade
 
@@ -232,9 +232,15 @@ Prints the pd-file snapshot that will be sent to the LLM as system context on th
 | `/history` | Show conversation turn count |
 | `/history clear` | Wipe conversation history |
 | `/config` | Show current LLM settings |
-| `/config url <url>` | Set server URL (OpenAI-compatible) |
+| `/config preset <name>` | Apply preset (sets url + provider + model + max_tokens) |
+| `/config preset list` | List available presets |
+| `/config preset export` | Write default presets to user file for editing |
+| `/config preset reload` | Reload user preset file |
+| `/config provider openai\|anthropic\|auto` | Select API shape (auto = infer from URL) |
+| `/config url <url>` | Set server URL |
 | `/config model <name>` | Set model name |
-| `/config key <key>` | Set API key (stored, masked in display) |
+| `/config maxtokens <N>` | Set max response tokens (default 4096) |
+| `/config key <key>` | Set API key for current provider (stored per-provider, masked in display) |
 | `/config test` | Ping server and verify connectivity |
 | `/config history on\|off` | Persist conversation history across restarts |
 | `/config autoplace on\|off` | Auto-placement (on) vs. LLM-specified coordinates (off) |
@@ -246,48 +252,102 @@ Prints the pd-file snapshot that will be sent to the LLM as system context on th
 
 ## LLM Backend Setup
 
-`pd-repente` speaks the OpenAI Chat Completions API (`POST /v1/chat/completions`). Any compatible server works.
+`pd-repente` speaks two API shapes natively:
 
-### Ollama (recommended for local use)
+- **OpenAI Chat Completions** (`POST /v1/chat/completions`) — used for OpenAI, Ollama, llama-server, LM Studio, OpenRouter, Together, Groq, and any other OpenAI-compatible server.
+- **Anthropic Messages** (`POST /v1/messages`) — used for Claude Opus / Sonnet / Haiku directly via the Anthropic API.
 
-Ollama running on `localhost:11434` is auto-detected on first launch — no configuration needed.
+Provider can be set explicitly (`/config provider openai|anthropic`) or inferred automatically from the URL (`/config provider auto` — `*.anthropic.com` → Anthropic, everything else → OpenAI). The fastest path is a **preset**:
+
+```
+/config preset list                  # show all presets
+/config preset ollama                # local Ollama (default)
+/config preset claude-sonnet         # Claude Sonnet via Anthropic API
+/config key sk-ant-...               # provide key (stored under current provider's slot)
+/config test                         # verify
+```
+
+### Built-in presets
+
+| Preset | Provider | URL | Model |
+|---|---|---|---|
+| `ollama` | openai | `http://localhost:11434` | `llama3.2` |
+| `repente` | openai | `http://localhost:7860` | `repente-1` |
+| `gpt-4o` | openai | `https://api.openai.com` | `gpt-4o` |
+| `claude-opus` | anthropic | `https://api.anthropic.com` | `claude-opus-4-7` |
+| `claude-sonnet` | anthropic | `https://api.anthropic.com` | `claude-sonnet-4-6` |
+| `claude-haiku` | anthropic | `https://api.anthropic.com` | `claude-haiku-4-5-20251001` |
+
+### Per-provider API keys
+
+Keys are stored **per provider** (separately for OpenAI-compat and Anthropic) so switching presets does not lose them. `/config key <k>` writes to the slot of the currently-selected provider; switching presets automatically re-loads the matching key from storage.
+
+If `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` is present in your environment when no LLM is configured, `pd-repente` logs a one-line hint at startup but never auto-pings remote endpoints without explicit consent.
+
+### Custom presets (user override file)
+
+Presets are loaded from a bundled defaults bundle plus an optional user file at:
+
+- macOS / Linux: `~/.config/plugdata/repente_presets.json` (or the equivalent plugdata settings dir on your platform)
+
+User entries with the same `name` override the bundled default; new names are appended. To seed the file with the current defaults for editing:
+
+```
+/config preset export
+```
+
+Schema:
+
+```json
+{
+  "version": 1,
+  "presets": {
+    "my-claude-3-7": {
+      "url": "https://api.anthropic.com",
+      "provider": "anthropic",
+      "model": "claude-3-7-sonnet-latest",
+      "max_tokens": 8192,
+      "description": "Claude 3.7 Sonnet (pinned)",
+      "key_env": "ANTHROPIC_API_KEY",
+      "requires_key": true
+    }
+  }
+}
+```
+
+After editing the file, run `/config preset reload` (no restart needed). Malformed user JSON is silently ignored — the bundled defaults always load.
+
+### Quick examples
+
+**Ollama** (auto-detected on first launch, no config needed):
 
 ```bash
 ollama serve
-ollama pull llama3.2   # or any model
+ollama pull llama3.2
 ```
 
-To override:
-```
-/config url http://localhost:11434
-/config model llama3.2
-```
-
-### llama-server / LM Studio
+**Claude (Anthropic API)**:
 
 ```
-/config url http://localhost:1234   # LM Studio default
-/config model <loaded-model-name>
+/config preset claude-sonnet
+/config key sk-ant-...
+/config test
 ```
 
-### OpenAI API
+**OpenAI**:
 
 ```
-/config url https://api.openai.com
-/config model gpt-4o
+/config preset gpt-4o
 /config key sk-...
 ```
 
+**Repente model** (fine-tuned for Pure Data; available on Hugging Face — run with Ollama or llama-server):
+
+```
+/config preset repente
+```
+
 > **Privacy:** A warning is shown any time a non-localhost URL is configured. Canvas patch data will be sent to that server.
-
-### Repente model (recommended)
-
-The Repente model is fine-tuned specifically for Pure Data patch generation and outputs clean, runnable pd syntax by default. Available on Hugging Face — run it with Ollama or llama-server.
-
-```
-/config url http://localhost:11434
-/config model repente-1
-```
 
 ---
 
@@ -306,7 +366,10 @@ PD-SCRIPT ENGINE                   REPENTE BRIDGE
 CommandParser                       Bridge
 SugarExpander                  CanvasSerializer ──→ pd-file context
 Executor                       SpectralAnalyzer ──→ spectral context (/listen)
-   │                           RepenteClient   ──→ HTTP POST /v1/chat/completions
+   │                           RepenteClient   ──→ HTTP POST (provider-routed)
+   │                             ├─ OpenAIProvider     → /v1/chat/completions
+   │                             └─ AnthropicProvider  → /v1/messages
+   │                           PresetLoader    ──→ bundled + user presets JSON
    │                           PdParser
    │                           Executor / openPatch / PatchMerger
    │
@@ -366,7 +429,9 @@ startCapture / feedAudio / takeCapture
 | Decision | Rationale |
 |---|---|
 | pd-file format for canvas context | LLMs are trained on it; no translation layer needed |
-| OpenAI-compat API only | Switching model = switching URL; no binary integration |
+| `ILlmProvider` interface | Each provider (OpenAI-compat, Anthropic) owns its endpoint/auth/body/parse shape; `RepenteClient` handles only transport |
+| Per-provider key storage | Switching presets does not lose keys for the other provider |
+| Bundled-defaults + user-file presets | Add Claude variants or new endpoints without rebuild; defaults always available |
 | Per-canvas Executor registry | Object identity (`osc_1`) isolated per tab |
 | AudioCapture: push from audio thread (wait-free), pull from message thread | Audio thread never blocks; no mutex in hot path |
 | audioContext appended to canvas context in single system message | One system message; LLM sees canvas + spectral in one block |

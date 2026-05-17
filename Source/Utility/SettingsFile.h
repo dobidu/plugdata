@@ -182,9 +182,13 @@ private:
         { "window_size", var(Array<var> { 1000, 660 }) },
         { "suggestions_size", var(Array<var> { 560, 240 }) },
         { "version", var("")},
-        { "repente_url", var("http://localhost:7860") },
-        { "repente_model", var("repente-1") },
-        { "repente_key", var("") },
+        { "repente_url", var("http://localhost:11434") },
+        { "repente_model", var("llama3.2") },
+        { "repente_key", var("") },                       // deprecated; migrated to repente_openai_key
+        { "repente_provider", var("openai") },            // "openai" | "anthropic"
+        { "repente_max_tokens", var(4096) },
+        { "repente_openai_key", var("") },
+        { "repente_anthropic_key", var("") },
         { "repente_merge_mode", var(false) },
         { "repente_persist_history", var(false) },
         { "repente_history", var("") },

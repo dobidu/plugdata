@@ -4,49 +4,57 @@
 */
 
 #pragma once
+#include "ILlmProvider.h"
 #include <juce_events/juce_events.h>
-#include <functional>
 #include <atomic>
+#include <functional>
+#include <memory>
 #include <vector>
 
 namespace RepentePd {
 
-// Async HTTP client for OpenAI-compatible endpoints.
+// Async HTTP client. Owns one ILlmProvider that controls auth/body/parse shape.
 // send() is non-blocking: spawns a detached thread, fires callback on message thread.
 class RepenteClient {
 public:
+    enum class Provider { OpenAI, Anthropic };
+
     struct Config {
         juce::String url;
         juce::String model;
         juce::String apiKey;
+        Provider     provider   = Provider::OpenAI;
         int          timeoutSec = 30;
+        int          maxTokens  = 4096;
 
-        Config() : url("http://localhost:7860"), model("repente-1") {}
+        Config() : url("http://localhost:11434"), model("llama3.2") {}
     };
 
-    struct Message {
-        juce::String role;     // "system" | "user" | "assistant"
-        juce::String content;
-    };
+    // Backwards-compat type alias for existing callers (Bridge.cpp).
+    using Message = LlmMessage;
 
     explicit RepenteClient(Config cfg = {});
     ~RepenteClient() { cancelled->store(true); }
 
-    // Fire-and-forget. Callback fires on message thread with response content,
-    // or "error: <reason>" on failure. Returns false if client is already busy.
-    // Caller builds the full messages array (system context + history + user prompt).
     bool send(std::vector<Message> const& messages,
               std::function<void(juce::String)> callback);
 
-    // Non-blocking GET /models ping. Fires callback(connected, message) on message thread.
     void ping(std::function<void(bool, juce::String)> callback);
 
     void setConfig(Config cfg);
     [[nodiscard]] Config const& getConfig() const { return config; }
     [[nodiscard]] bool isBusy() const { return busy.load(); }
 
+    // Factory: build provider impl for given enum.
+    static std::shared_ptr<ILlmProvider> makeProvider(Provider p);
+
+    // Convert string ↔ enum. Used by config commands and SettingsFile.
+    static juce::String  providerToString(Provider p);
+    static Provider      providerFromString(juce::String const& s);
+
 private:
     Config config;
+    std::shared_ptr<ILlmProvider> provider;
     std::atomic<bool> busy { false };
     std::shared_ptr<std::atomic<bool>> cancelled = std::make_shared<std::atomic<bool>>(false);
 

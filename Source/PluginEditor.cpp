@@ -289,9 +289,27 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     {
         auto* sf = SettingsFile::getInstance();
         RepentePd::RepenteClient::Config cfg;
-        if (sf->hasProperty("repente_url"))   cfg.url    = sf->getProperty<String>("repente_url");
-        if (sf->hasProperty("repente_model")) cfg.model  = sf->getProperty<String>("repente_model");
-        if (sf->hasProperty("repente_key"))   cfg.apiKey = sf->getProperty<String>("repente_key");
+        if (sf->hasProperty("repente_url"))         cfg.url       = sf->getProperty<String>("repente_url");
+        if (sf->hasProperty("repente_model"))       cfg.model     = sf->getProperty<String>("repente_model");
+        if (sf->hasProperty("repente_provider"))
+            cfg.provider = RepentePd::RepenteClient::providerFromString(sf->getProperty<String>("repente_provider"));
+        if (sf->hasProperty("repente_max_tokens"))  cfg.maxTokens = (int) sf->getProperty<int>("repente_max_tokens");
+
+        // Migration: old `repente_key` → provider-specific slot (defaults to OpenAI).
+        {
+            String legacyKey = sf->hasProperty("repente_key") ? sf->getProperty<String>("repente_key") : String();
+            String openaiKey = sf->hasProperty("repente_openai_key") ? sf->getProperty<String>("repente_openai_key") : String();
+            String anthropicKey = sf->hasProperty("repente_anthropic_key") ? sf->getProperty<String>("repente_anthropic_key") : String();
+            if (legacyKey.isNotEmpty() && openaiKey.isEmpty() && anthropicKey.isEmpty()) {
+                sf->setProperty("repente_openai_key", legacyKey);
+                sf->setProperty("repente_key", String());     // clear deprecated slot
+                openaiKey = legacyKey;
+                pd->logRepente("repente: migrated legacy api key to openai slot");
+            }
+            cfg.apiKey = (cfg.provider == RepentePd::RepenteClient::Provider::Anthropic)
+                             ? anthropicKey : openaiKey;
+        }
+
         bridge->setConfig(std::move(cfg));
 
         // First-launch auto-detect: no URL configured → probe Ollama then repente server
@@ -339,14 +357,26 @@ PluginEditor::PluginEditor(PluginProcessor& p)
                     pd->logRepente("repente: no LLM detected — configure with:");
                     pd->logMessage(
                         "  Ollama (local, free):\n"
-                        "    /config url http://localhost:11434\n"
-                        "    /config model llama3.2\n"
+                        "    /config preset ollama\n"
+                        "  Claude (Anthropic):\n"
+                        "    /config preset claude-sonnet\n"
+                        "    /config key sk-ant-...\n"
                         "  OpenAI:\n"
-                        "    /config url https://api.openai.com\n"
+                        "    /config preset gpt-4o\n"
                         "    /config key sk-...\n"
-                        "    /config model gpt-4o\n"
                         "  repente server:\n"
-                        "    /config url http://localhost:7860");
+                        "    /config preset repente\n"
+                        "  /config preset list   — show all presets");
+
+                    // Env-var hints (no auto-ping; remote endpoints not contacted without user consent).
+                    auto const anthropicEnv = juce::SystemStats::getEnvironmentVariable("ANTHROPIC_API_KEY", "");
+                    auto const openaiEnv    = juce::SystemStats::getEnvironmentVariable("OPENAI_API_KEY", "");
+                    if (anthropicEnv.isNotEmpty())
+                        pd->logRepente("repente: ANTHROPIC_API_KEY detected in env "
+                                       "— run `/config preset claude-sonnet` then `/config key <your-key>` to use Claude");
+                    if (openaiEnv.isNotEmpty())
+                        pd->logRepente("repente: OPENAI_API_KEY detected in env "
+                                       "— run `/config preset gpt-4o` then `/config key <your-key>` to use OpenAI");
                 });
             });
         }
