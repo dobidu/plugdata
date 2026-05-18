@@ -617,6 +617,31 @@ public:
             expect(c0.find("second") != std::string::npos);
         }
 
+        beginTest("buildBody: system block carries cache_control: ephemeral");
+        {
+            LlmRequest req;
+            req.model    = "claude-sonnet-4-6";
+            req.messages = {{"system", "canvas state"}, {"user", "hi"}};
+            json body = json::parse(p.buildBody(req));
+            expect(body.contains("system") && body["system"].is_array(),
+                   "system is array of content blocks (required for cache_control)");
+            expect(body["system"].size() == 1, "one system block");
+            auto const& blk = body["system"][0];
+            expect(blk["type"] == "text", "block is text type");
+            expect(blk["text"] == "canvas state", "text preserved");
+            expect(blk.contains("cache_control"), "cache_control present");
+            expect(blk["cache_control"]["type"] == "ephemeral", "ephemeral TTL");
+        }
+
+        beginTest("buildBody: no system field when none provided");
+        {
+            LlmRequest req;
+            req.model    = "claude-sonnet-4-6";
+            req.messages = {{"user", "hi"}};
+            json body = json::parse(p.buildBody(req));
+            expect(!body.contains("system"), "system omitted when empty");
+        }
+
         beginTest("buildBody: max_tokens defaults to 4096 when unset");
         {
             LlmRequest req;

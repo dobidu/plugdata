@@ -57,8 +57,21 @@ std::string AnthropicProvider::buildBody(LlmRequest const& req) const
         {"max_tokens", req.maxTokens > 0 ? req.maxTokens : 4096},
         {"stream",     false}
     };
-    if (systemText.isNotEmpty())
-        body["system"] = systemText.toStdString();
+    if (systemText.isNotEmpty()) {
+        // Emit system as an array of text blocks with cache_control on the last
+        // block so Anthropic caches the canvas + spectral context across turns.
+        // Caching is a prefix match — when the canvas does not change between
+        // requests (multi-turn conversation, /analyze followups), reads serve at
+        // ~10% of base input price. Silently no-ops below the model's minimum
+        // cacheable prefix (~1024–4096 tokens depending on model).
+        body["system"] = json::array({
+            {
+                {"type", "text"},
+                {"text", systemText.toStdString()},
+                {"cache_control", {{"type", "ephemeral"}}}
+            }
+        });
+    }
 
     return body.dump();
 }
