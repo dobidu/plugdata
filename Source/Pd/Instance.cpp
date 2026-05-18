@@ -43,11 +43,11 @@ public:
         startTimerHz(30);
     }
 
-    void addMessage(void* object, String const& message, bool type)
+    void addMessage(void* object, String const& message, int type)
     {
         if (consoleMessages.size()) {
             auto& [lastObject, lastMessage, lastType, lastLength, numMessages] = consoleMessages.back();
-            if (object == lastObject && message == lastMessage && static_cast<int>(type) == lastType) {
+            if (object == lastObject && message == lastMessage && type == lastType) {
                 numMessages++;
             } else {
                 consoleMessages.emplace_back(object, message, type, CachedStringWidth<14>::calculateStringWidth(message) + 40, 1);
@@ -62,17 +62,22 @@ public:
 
     void logMessage(void* object, SmallString const& message)
     {
-        pendingMessages.enqueue({ object, message, false });
+        pendingMessages.enqueue({ object, message, 0 });
     }
 
     void logWarning(void* object, SmallString const& warning)
     {
-        pendingMessages.enqueue({ object, warning, true });
+        pendingMessages.enqueue({ object, warning, 1 });
     }
 
     void logError(void* object, SmallString const& error)
     {
-        pendingMessages.enqueue({ object, error, true });
+        pendingMessages.enqueue({ object, error, 1 });
+    }
+
+    void logRepente(void* object, SmallString const& message)
+    {
+        pendingMessages.enqueue({ object, message, 3 });
     }
 
     void processPrint(void* object, char const* message)
@@ -127,7 +132,7 @@ public:
 private:
     void timerCallback() override
     {
-        auto item = std::tuple<void*, SmallString, bool>();
+        auto item = std::tuple<void*, SmallString, int>();
         int numReceived = 0;
         bool newWarning = false;
         SmallString lastMessage;
@@ -152,7 +157,7 @@ private:
 
     StackArray<char, 2048> printConcatBuffer = { };
 
-    moodycamel::ConcurrentQueue<std::tuple<void*, SmallString, bool>> pendingMessages = moodycamel::ConcurrentQueue<std::tuple<void*, SmallString, bool>>(512);
+    moodycamel::ConcurrentQueue<std::tuple<void*, SmallString, int>> pendingMessages = moodycamel::ConcurrentQueue<std::tuple<void*, SmallString, int>>(512);
     int messageLength = 0;
 };
 
@@ -1277,6 +1282,11 @@ void Instance::logError(String const& error)
 void Instance::logWarning(String const& warning)
 {
     consoleMessageHandler->logWarning(nullptr, warning);
+}
+
+void Instance::logRepente(String const& message)
+{
+    consoleMessageHandler->logRepente(nullptr, message);
 }
 
 std::deque<std::tuple<void*, String, int, int, int>>& Instance::getConsoleMessages() const

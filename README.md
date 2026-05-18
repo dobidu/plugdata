@@ -26,6 +26,87 @@
 
 plugdata is a plugin wrapper for Pure Data, featuring a new GUI made with JUCE. This is still a WIP, and there are probably still some bugs. By default, it ships with the ELSE collection of externals and abstractions. The aim is to provide a more comfortable patching experience for a large selection of DAWs. It can also be used as a standalone replacement for pure-data.
 
+---
+
+## pd-repente
+
+> **This fork adds pd-repente** — describe what you want to hear. A working Pure Data patch appears on the canvas and plays immediately.
+
+[![CI](https://github.com/dobidu/plugdata/actions/workflows/cmake.yml/badge.svg)](https://github.com/dobidu/plugdata/actions)
+
+### What it is
+
+pd-repente embeds a prompt bar directly into plugdata. Type a musical idea in plain language — "a filtered noise burst with slow attack" — and a valid Pure Data patch is generated, placed on the canvas, and starts running. No switching windows, no copy-pasting.
+
+The LLM is context-aware: every request includes the current canvas state as a system message, so the model knows what is already on the canvas. Conversation history is maintained across turns — say "now add reverb" and it knows what "it" refers to. History persists across restarts.
+
+pd-repente is **local-first**: works with any OpenAI-compatible server — Ollama, llama-server, LM Studio, or the OpenAI API — and defaults to `localhost`.
+
+### Features
+
+- **Natural language → patch** — free text → LLM → pd patch, pds commands, or Lua, auto-detected and executed
+- **Context-aware + multi-turn** — canvas injected as system message; prior exchanges included each turn
+- **Analysis mode** — `/analyze <question>` asks the LLM about the patch; nothing executed
+- **Merge mode** — toggle in prompt bar; generated patches merge into current canvas instead of new tab
+- **pd-script REPL** — `/pds create / connect / delete / move / list` directly manipulate canvas objects
+- **Sugar syntax** — `@osc~`, `~filter~`, `-> dac~`, `$last` shortcuts
+- **Lua scripting** — `{ }` blocks run inline Lua with full `pds.*` API
+- **Object Tree Panel** — sidebar shows all canvas objects grouped by type (DSP / UI / Control)
+- **Persistent config** — LLM URL, model, API key, merge mode, and conversation history stored across restarts
+
+### Quick start
+
+```bash
+git clone --recursive https://github.com/dobidu/plugdata.git
+cd plugdata
+cmake -S . -B build -G Ninja
+cmake --build build --target plugdata_standalone_Standalone -j$(nproc)
+```
+
+Connect an LLM:
+
+```
+/config url http://localhost:11434    # Ollama running locally
+/config model llama3.2
+/config test                          # verify connection
+```
+
+Make sound:
+
+```
+make a sine wave at 440 Hz connected to output
+```
+
+A patch with `osc~ 440` → `dac~` appears and plays.
+
+### Command reference
+
+| Command | Description |
+|---|---|
+| `<free text>` | Send to LLM; canvas state + history injected automatically |
+| `/analyze <question>` | Ask LLM about the patch — text only, no execution |
+| `/history` | Show conversation turn count |
+| `/history clear` | Wipe conversation history |
+| `/pds <cmd>` | pd-script REPL (create / connect / delete / move / list) |
+| `/config` | Show / set LLM settings (url / model / key / test) |
+| `/canvas` | Print serialized canvas state (debug) |
+| `/help [topic]` | Help topics: `pds` · `sugar` · `lua` · `llm` · `commands` · `builtin` |
+| `/clear` | Clear console |
+
+### Roadmap
+
+| Phase | Status | Description |
+|---|---|---|
+| 01 — Foundation | ✓ Done | CI matrix (Win/Mac/Linux), PromptBar, baseline tests |
+| 02 — pd-script REPL | ✓ Done | REPL engine, sugar syntax, ObjectTreePanel, Lua+pds API |
+| 03 — Repente Bridge | ✓ Done | HTTP client, LLM → patch, /config, SettingsFile persistence |
+| 04 — Bidirectionality | In progress | Canvas context injection, /analyze, merge mode, multi-turn history |
+| 05 — V1.0 Polish | Planned | Auto-layout, clickable object tree, Ollama auto-detect, public release |
+
+Full feature documentation: [`apps/pd-repente/README.md`](apps/pd-repente/README.md)
+
+---
+
 Join the Discord here, for sharing patches, reporting issues or requesting features: https://discord.gg/eT2RxdF9Nq
 
 <p align="middle">

@@ -185,6 +185,8 @@ PluginProcessor::PluginProcessor()
     // first launch.
     initialisePd(pdlua_version);
     logMessage(pdlua_version);
+    logMessage("repente-pd v0.4");
+    logMessage(String::fromUTF8("\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
 
     updateSearchPaths();
 
@@ -1051,6 +1053,7 @@ void PluginProcessor::processVariable(dsp::AudioBlock<float> buffer, MidiBuffer&
 
         blockMidiBuffer.clear();
         outputFifo->writeAudioAndMidi(audioBufferOut, blockMidiBuffer);
+        audioCapture.feedAudio(audioBufferOut);
     }
 
     midiBuffer.clear();

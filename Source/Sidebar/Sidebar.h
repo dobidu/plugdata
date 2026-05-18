@@ -19,8 +19,9 @@ class DocumentationBrowser;
 class AutomationPanel;
 class SearchPanel;
 class PluginProcessor;
-class CommandInput;
 class Palettes;
+
+namespace RepentePd { class ObjectTreePanel; }
 
 namespace pd {
 class Instance;
@@ -275,6 +276,7 @@ public:
         ParamPanel,
         PatchSearchPanel,
         PalettePanel,
+        ObjectsPanel,
         InspectorPanel
     };
 
@@ -298,6 +300,8 @@ public:
 
     void renderButtonsOnCanvas(NVGcontext* ctx);
 
+    RepentePd::ObjectTreePanel* getObjectsPanel() const;
+
     static constexpr int dragbarWidth = 6;
 
 private:
@@ -318,6 +322,7 @@ private:
     SidebarSelectorButton automationButton = SidebarSelectorButton(Icons::Parameters);
     SidebarSelectorButton searchButton = SidebarSelectorButton(Icons::Search);
     SidebarSelectorButton paletteButton = SidebarSelectorButton(Icons::Palette);
+    SidebarSelectorButton objectsButton = SidebarSelectorButton(Icons::Object);
 
     Rectangle<int> dividerBounds;
 
@@ -330,13 +335,12 @@ private:
     std::unique_ptr<AutomationPanel> automationPanel;
     std::unique_ptr<SearchPanel> searchPanel;
     std::unique_ptr<Palettes> palettePanel;
-
-    std::unique_ptr<CommandInput> commandInput;
+    std::unique_ptr<RepentePd::ObjectTreePanel> objectsPanel;
 
     std::unique_ptr<Inspector> inspector;
     std::unique_ptr<Component> resetInspectorButton;
 
-    StringArray panelNames = { "Console", "Documentation Browser", "Automation Parameters", "Search", "Palettes" };
+    StringArray panelNames = { "Console", "Documentation Browser", "Automation Parameters", "Search", "Palettes", "Objects" };
     int currentPanel = 0;
 
     struct PanelAndButton {

@@ -231,7 +231,7 @@ file(GLOB StandaloneBinarySources
     ${CMAKE_CURRENT_SOURCE_DIR}/Resources/Extra/GeneralUser_GS.sf3
     )
 
-file(GLOB plugdata_sources
+file(GLOB plugdata_sources CONFIGURE_DEPENDS
     ${SOURCES_DIRECTORY}/*.h
     ${SOURCES_DIRECTORY}/*.cpp
     ${SOURCES_DIRECTORY}/Utility/*.h
@@ -254,6 +254,18 @@ file(GLOB plugdata_sources
     ${SOURCES_DIRECTORY}/Standalone/InternalSynth.cpp
     ${SOURCES_DIRECTORY}/Standalone/PlugDataApp.h
     ${SOURCES_DIRECTORY}/Standalone/PlugDataWindow.h
+    ${SOURCES_DIRECTORY}/RepentePd/*.h
+    ${SOURCES_DIRECTORY}/RepentePd/*.cpp
+    ${SOURCES_DIRECTORY}/RepentePd/UI/*.h
+    ${SOURCES_DIRECTORY}/RepentePd/UI/*.cpp
+    ${SOURCES_DIRECTORY}/RepentePd/Core/*.h
+    ${SOURCES_DIRECTORY}/RepentePd/Core/*.cpp
+    ${SOURCES_DIRECTORY}/RepentePd/Bridge/*.h
+    ${SOURCES_DIRECTORY}/RepentePd/Bridge/*.cpp
+    ${SOURCES_DIRECTORY}/RepentePd/Commands/*.h
+    ${SOURCES_DIRECTORY}/RepentePd/Commands/*.cpp
+    ${SOURCES_DIRECTORY}/RepentePd/Integration/*.h
+    ${SOURCES_DIRECTORY}/RepentePd/Integration/*.cpp
 )
 
 
@@ -264,6 +276,7 @@ if(ENABLE_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/Tests/Tests.h
     ${CMAKE_CURRENT_SOURCE_DIR}/Tests/HelpfileFuzzTest.h
     ${CMAKE_CURRENT_SOURCE_DIR}/Tests/ObjectFuzzTest.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Tests/RepentePdTests.h
     )
 
 endif()
@@ -421,6 +434,8 @@ list(APPEND PLUGDATA_INCLUDE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/pu
 list(APPEND PLUGDATA_INCLUDE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/JUCE/modules")
 list(APPEND PLUGDATA_INCLUDE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/readerwriterqueue/")
 list(APPEND PLUGDATA_INCLUDE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/concurrentqueue/")
+list(APPEND PLUGDATA_INCLUDE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/cpp-httplib")
+list(APPEND PLUGDATA_INCLUDE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/nlohmann")
 if(ENABLE_PERFETTO)
   list(APPEND PLUGDATA_INCLUDE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/_deps/perfetto-src/sdk")
   list(APPEND PLUGDATA_INCLUDE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/melatonin_perfetto")
@@ -432,6 +447,12 @@ target_compile_definitions(plugdata_core PUBLIC ${PLUGDATA_COMPILE_DEFINITIONS})
 target_include_directories(plugdata_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Tests ${CMAKE_CURRENT_SOURCE_DIR}/Libraries/raw-keyboard-input-module ${CMAKE_CURRENT_SOURCE_DIR}/Libraries/pure-data/src ${CMAKE_CURRENT_SOURCE_DIR}/Libraries/pure-data/src ${CMAKE_CURRENT_SOURCE_DIR}/Source ${CMAKE_CURRENT_SOURCE_DIR}/Libraries)
 target_link_libraries(plugdata_core PUBLIC ${libs})
 target_include_directories(plugdata_core PUBLIC ${PLUGDATA_INCLUDE_DIRECTORY})
+
+# OpenSSL for cpp-httplib HTTPS support (optional — falls back to HTTP if not found)
+find_package(OpenSSL QUIET)
+if(OpenSSL_FOUND)
+    target_link_libraries(plugdata_core PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+endif()
 include_directories(./Libraries/nanovg/src/)
 
 foreach(core_SOURCE ${plugdata_sources})

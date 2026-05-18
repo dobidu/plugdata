@@ -173,19 +173,26 @@ public:
         commandInput = newCommandInput;
     }
 
+    void registerExtension(std::function<void(lua_State*)> const& fn)
+    {
+        fn(L);
+    }
+
 private:
     lua_State* L; // Lua state
     pd::Instance* pd;
     CommandProcessor* commandInput = nullptr;
 };
 
-class CommandInput final
+class CommandInput
     : public Component
     , public KeyListener
     , public CommandProcessor
     , public FocusChangeListener
     , public MarkupDisplay::URLHandler {
 public:
+    void grabInputFocus() { commandInput.grabKeyboardFocus(); }
+
     explicit CommandInput(PluginEditor* editor)
         : editor(editor)
     {
@@ -267,10 +274,13 @@ public:
         Desktop::getInstance().addFocusChangeListener(this);
     }
 
+    virtual StringArray const& getHelperCommands() const { return helperCommands; }
+    virtual StringArray const& getObjectHelperCommands() const { return objectHelperCommands; }
+
     void updateHelperCommands()
     {
         auto isGlobalTarget = consoleTargetName == ">" || consoleTargetName == "lua >";
-        auto& currentHelpers = isGlobalTarget ? helperCommands : objectHelperCommands;
+        auto const& currentHelpers = isGlobalTarget ? getHelperCommands() : getObjectHelperCommands();
 
         helperButtons.clear();
 
@@ -294,7 +304,7 @@ public:
 
     void updateSize(bool animate = false)
     {
-        int const extraHeight = hasInputFocus ? helperRowHeight : 0;
+        int const extraHeight = (hasInputFocus && !helperButtons.isEmpty()) ? helperRowHeight : 0;
         int const newHeight = std::max(commandInput.getTextHeight() + 4, 30) + extraHeight;
 
         auto const fromBounds = getBounds();
@@ -463,7 +473,7 @@ public:
         editor->showCalloutBox(std::move(markupDisplay), getScreenBounds().withSizeKeepingCentre(5, 30));
     }
 
-    SmallArray<std::pair<int, String>> executeCommand(pd::Instance* pd, String message) override
+    virtual SmallArray<std::pair<int, String>> executeCommand(pd::Instance* pd, String message) override
     {
         SmallArray<std::pair<int, String>> result;
 
@@ -895,8 +905,11 @@ private:
     static inline auto luas = UnorderedMap<pd::Instance*, std::unique_ptr<LuaExpressionParser>>();
     LuaExpressionParser* lua;
 
+protected:
     int consoleTargetLength = 10;
     String consoleTargetName = ">";
+
+private:
 
     int currentHistoryIndex = -1;
     static inline std::deque<String> commandHistory;
@@ -1002,4 +1015,10 @@ public:
         "messbox",
         "pad",
         "button" };
+
+protected:
+    void registerLuaExtension(std::function<void(lua_State*)> const& fn)
+    {
+        if (lua) lua->registerExtension(fn);
+    }
 };

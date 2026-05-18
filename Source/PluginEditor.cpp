@@ -37,6 +37,9 @@
 #include "PluginMode.h"
 #include "Components/TouchSelectionHelper.h"
 #include "NVGSurface.h"
+#include "RepentePd/UI/PromptInput.h"
+#include "RepentePd/UI/ObjectTreePanel.h"
+#include "RepentePd/Bridge/Bridge.h"
 
 #if ENABLE_TESTING
 void runTests(PluginEditor* editor);
@@ -268,6 +271,116 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         addAndMakeVisible(touchSelectionHelper.get());
     }
     touchSelectionHelper->setAlwaysOnTop(true);
+
+    executor = std::make_unique<RepentePd::Executor>(nullptr);
+    promptInput = std::make_unique<RepentePd::PromptInput>(this, executor.get());
+    promptInput->setAlwaysOnTop(true);
+    addAndMakeVisible(promptInput.get());
+
+    promptInput->onRegistryChanged = [this]() {
+        if (auto* panel = sidebar->getObjectsPanel())
+            panel->refresh(*executor);
+    };
+
+    bridge = std::make_unique<RepentePd::Bridge>(this);
+    promptInput->setBridge(bridge.get());
+    juce::MessageManager::callAsync([this] { if (promptInput) promptInput->grabInputFocus(); });
+
+    {
+        auto* sf = SettingsFile::getInstance();
+        RepentePd::RepenteClient::Config cfg;
+        if (sf->hasProperty("repente_url"))         cfg.url       = sf->getProperty<String>("repente_url");
+        if (sf->hasProperty("repente_model"))       cfg.model     = sf->getProperty<String>("repente_model");
+        if (sf->hasProperty("repente_provider"))
+            cfg.provider = RepentePd::RepenteClient::providerFromString(sf->getProperty<String>("repente_provider"));
+        if (sf->hasProperty("repente_max_tokens"))  cfg.maxTokens = (int) sf->getProperty<int>("repente_max_tokens");
+
+        // Migration: old `repente_key` → provider-specific slot (defaults to OpenAI).
+        {
+            String legacyKey = sf->hasProperty("repente_key") ? sf->getProperty<String>("repente_key") : String();
+            String openaiKey = sf->hasProperty("repente_openai_key") ? sf->getProperty<String>("repente_openai_key") : String();
+            String anthropicKey = sf->hasProperty("repente_anthropic_key") ? sf->getProperty<String>("repente_anthropic_key") : String();
+            if (legacyKey.isNotEmpty() && openaiKey.isEmpty() && anthropicKey.isEmpty()) {
+                sf->setProperty("repente_openai_key", legacyKey);
+                sf->setProperty("repente_key", String());     // clear deprecated slot
+                openaiKey = legacyKey;
+                pd->logRepente("repente: migrated legacy api key to openai slot");
+            }
+            cfg.apiKey = (cfg.provider == RepentePd::RepenteClient::Provider::Anthropic)
+                             ? anthropicKey : openaiKey;
+        }
+
+        bridge->setConfig(std::move(cfg));
+
+        // First-launch auto-detect: no URL configured → probe Ollama then repente server
+        if (!sf->hasProperty("repente_url")) {
+            pd->logRepente("repente: no config found — detecting LLM backend...");
+
+            // Probe Ollama at localhost:11434
+            {
+                RepentePd::RepenteClient::Config probeCfg;
+                probeCfg.url   = "http://localhost:11434";
+                probeCfg.model = "llama3.2";
+                bridge->setConfig(probeCfg);
+            }
+
+            bridge->ping([this](bool ok, juce::String const&) {
+                if (ok) {
+                    auto* sf2 = SettingsFile::getInstance();
+                    sf2->setProperty("repente_url",   juce::String("http://localhost:11434"));
+                    sf2->setProperty("repente_model", juce::String("llama3.2"));
+                    sf2->saveSettings();
+                    pd->logRepente("repente: Ollama detected at localhost:11434 (model: llama3.2)");
+                    pd->logMessage("  run: ollama list          to see installed models\n"
+                                   "  use: /config model <name> to switch");
+                    return;
+                }
+                // Ollama not found — probe repente server at localhost:7860
+                {
+                    RepentePd::RepenteClient::Config probeCfg;
+                    probeCfg.url   = "http://localhost:7860";
+                    probeCfg.model = "repente-1";
+                    bridge->setConfig(probeCfg);
+                }
+                bridge->ping([this](bool ok2, juce::String const&) {
+                    if (ok2) {
+                        auto* sf2 = SettingsFile::getInstance();
+                        sf2->setProperty("repente_url",   juce::String("http://localhost:7860"));
+                        sf2->setProperty("repente_model", juce::String("repente-1"));
+                        sf2->saveSettings();
+                        pd->logRepente("repente: server detected at localhost:7860");
+                        return;
+                    }
+                    // Neither found — reset to defaults and show instructions
+                    RepentePd::RepenteClient::Config defCfg;
+                    bridge->setConfig(defCfg);
+                    pd->logRepente("repente: no LLM detected — configure with:");
+                    pd->logMessage(
+                        "  Ollama (local, free):\n"
+                        "    /config preset ollama\n"
+                        "  Claude (Anthropic):\n"
+                        "    /config preset claude-sonnet\n"
+                        "    /config key sk-ant-...\n"
+                        "  OpenAI:\n"
+                        "    /config preset gpt-4o\n"
+                        "    /config key sk-...\n"
+                        "  repente server:\n"
+                        "    /config preset repente\n"
+                        "  /config preset list   — show all presets");
+
+                    // Env-var hints (no auto-ping; remote endpoints not contacted without user consent).
+                    auto const anthropicEnv = juce::SystemStats::getEnvironmentVariable("ANTHROPIC_API_KEY", "");
+                    auto const openaiEnv    = juce::SystemStats::getEnvironmentVariable("OPENAI_API_KEY", "");
+                    if (anthropicEnv.isNotEmpty())
+                        pd->logRepente("repente: ANTHROPIC_API_KEY detected in env "
+                                       "— run `/config preset claude-sonnet` then `/config key <your-key>` to use Claude");
+                    if (openaiEnv.isNotEmpty())
+                        pd->logRepente("repente: OPENAI_API_KEY detected in env "
+                                       "— run `/config preset gpt-4o` then `/config key <your-key>` to use OpenAI");
+                });
+            });
+        }
+    }
 
     statusbar->setAlwaysOnTop(true);
     addAndMakeVisible(statusbar.get());
@@ -572,7 +685,8 @@ void PluginEditor::resized()
     nvgSurface.setRoundedBottomCorners(true, welcomePanel->isVisible() || sidebar->isHidden());
 #endif
 
-    auto const workAreaHeight = getHeight() - toolbarHeight;
+    auto const promptBarHeight = 36;
+    auto const workAreaHeight = getHeight() - toolbarHeight - promptBarHeight;
     auto const sidebarWidth = (sidebar->isVisible() && !sidebar->isHidden()) ? sidebar->getWidth() : 0;
     workArea = Rectangle<int>(0, toolbarHeight, getWidth() - sidebarWidth, workAreaHeight);
 
@@ -602,7 +716,9 @@ void PluginEditor::resized()
     redoButton.setBounds(2 * buttonDistance + offset, 0, buttonSize, buttonSize);
     addObjectMenuButton.setBounds(3 * buttonDistance + offset, 0, buttonSize, buttonSize);
 
-    auto statusbarBounds = getLocalBounds().removeFromBottom(46).translated(0, -10);
+    promptInput->setBounds(0, toolbarHeight + workAreaHeight, getWidth(), promptBarHeight);
+
+    auto statusbarBounds = getLocalBounds().withTrimmedBottom(promptBarHeight).removeFromBottom(46).translated(0, -10);
     if (SettingsFile::getInstance()->isUsingTouchMode()) {
         touchSelectionHelper->setBounds(statusbarBounds.withSizeKeepingCentre(192, 46));
         statusbar->setBounds(statusbarBounds.removeFromLeft(208).translated(4, 0));
@@ -905,6 +1021,11 @@ void PluginEditor::updateConsole(SmallString const& message, bool messageIsWarni
         consoleMessageDisplay->showMessage(message, messageIsWarning);
 }
 
+void PluginEditor::clearConsole()
+{
+    sidebar->clearConsole();
+}
+
 TabComponent& PluginEditor::getTabComponent()
 {
     return tabComponent;
@@ -958,10 +1079,28 @@ void PluginEditor::modifierKeysChanged(ModifierKeys const& modifiers)
     setModifierKeys(modifiers);
 }
 
+RepentePd::PromptInput* PluginEditor::getPromptInput() const
+{
+    return promptInput.get();
+}
+
+void PluginEditor::refreshObjectsPanel()
+{
+    if (executor)
+        executor->pruneDeletedObjects();
+    if (auto* panel = sidebar->getObjectsPanel())
+        panel->refresh(getCurrentCanvas(), executor.get());
+}
+
 // Updates command status asynchronously
 void PluginEditor::handleAsyncUpdate()
 {
     tabComponent.repaint(); // So tab dirty titles can be reflected
+
+    if (executor)
+        executor->setCanvas(getCurrentCanvas());
+
+    refreshObjectsPanel();
 
     if (auto const* cnv = getCurrentCanvas()) {
         bool locked = getValue<bool>(cnv->locked);
@@ -1017,7 +1156,7 @@ void PluginEditor::updateSelection(Canvas* cnv)
         } else if (objects.size() > 1) {
             name = "(" + String(objects.size()) + " selected)";
         }
-        sidebar->setCommandTarget(name);
+        promptInput->setConsoleTargetName(name);
     }
 }
 
@@ -1041,7 +1180,7 @@ void PluginEditor::setCommandButtonObject(Object const* obj)
     auto name = String("empty");
     if (obj->cnv) {
         name = obj->getType(false);
-     sidebar->setCommandTarget(name);
+        promptInput->setConsoleTargetName(name);
     }
 }
 
@@ -1535,12 +1674,15 @@ bool PluginEditor::perform(InvocationInfo const& info)
                             if (!cnv)
                                 return;
                             if (result == 2)
-                                cnv->save([this, cnv]() mutable { tabComponent.closeTab(cnv); });
-                            else if (result == 1)
+                                cnv->save([this, cnv]() mutable { if (cnv) executor->removeCanvas(cnv); tabComponent.closeTab(cnv); });
+                            else if (result == 1) {
+                                executor->removeCanvas(cnv);
                                 tabComponent.closeTab(cnv);
+                            }
                         },
                         0, true);
                 } else {
+                    executor->removeCanvas(cnv);
                     tabComponent.closeTab(cnv);
                 }
             });

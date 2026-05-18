@@ -22,6 +22,10 @@
 
 #include "Utility/ObjectThemeManager.h"
 #include "NVGSurface.h"
+#include "RepentePd/Core/Executor.h"
+
+namespace RepentePd { class PromptInput; }
+namespace RepentePd { class Bridge; }
 
 class ConnectionMessageDisplay;
 class Sidebar;
@@ -91,6 +95,9 @@ public:
 
     void updateCommandStatus();
     void handleAsyncUpdate() override;
+    void refreshObjectsPanel();
+    [[nodiscard]] RepentePd::PromptInput* getPromptInput() const;
+    [[nodiscard]] RepentePd::Executor* getExecutor() const { return executor.get(); }
 
     void updateSelection(Canvas* cnv);
     void setCommandButtonObject(Object const* obj);
@@ -98,6 +105,8 @@ public:
     void installPackage(File const& file);
 
     void updateConsole(SmallString const& message, bool isWarning, int numMessages, bool newWarning);
+
+    void clearConsole();
 
     bool isInterestedInFileDrag(StringArray const& files) override;
     void filesDropped(StringArray const& files, int x, int y) override;
@@ -209,6 +218,10 @@ private:
     std::unique_ptr<NVGGraphicsContext> nvgCtx;
 
     OSUtils::KeyboardLayout keyboardLayout;
+
+    std::unique_ptr<RepentePd::PromptInput> promptInput;
+    std::unique_ptr<RepentePd::Executor> executor;
+    std::unique_ptr<RepentePd::Bridge> bridge;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

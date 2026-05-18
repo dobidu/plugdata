@@ -1040,13 +1040,17 @@ void Canvas::performSynchronise()
     }
 
     // Remove deleted objects
+    bool objectsRemoved = false;
     for (int n = objects.size() - 1; n >= 0; n--) {
         // If the object is showing it's initial editor, meaning no object was assigned yet, allow it to exist without pointing to an object
         if (auto* object = objects[n]; !object->getPointer() && !object->isInitialEditorShown()) {
             setSelected(object, false, false);
             objects.remove_at(n);
+            objectsRemoved = true;
         }
     }
+    if (objectsRemoved && editor->getCurrentCanvas() == this)
+        editor->refreshObjectsPanel();
 
     // Check for connections that need to be remade because of invalid iolets
     for (int n = connections.size() - 1; n >= 0; n--) {

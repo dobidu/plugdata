@@ -283,6 +283,7 @@ public:
     void logMessage(String const& message);
     void logError(String const& message);
     void logWarning(String const& message);
+    void logRepente(String const& message);
 
     std::deque<std::tuple<void*, String, int, int, int>>& getConsoleMessages() const;
     std::deque<std::tuple<void*, String, int, int, int>>& getConsoleHistory() const;
