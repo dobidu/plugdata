@@ -20,6 +20,11 @@
 */
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#if ENABLE_TESTING
+#include <cstdlib>
+#include <iostream>
+#endif
+
 #include "Utility/Config.h"
 #include "Utility/Fonts.h"
 #include "Utility/OSUtils.h"
@@ -101,6 +106,24 @@ public:
 
     void initialise(String const& arguments) override
     {
+#if ENABLE_TESTING
+        // CI mode: when PLUGDATA_CI_TESTS_ONLY=1 is set, run only the synchronous
+        // RepentePd unit test category and exit. Bypasses StandalonePluginHolder
+        // construction (audio device, pd init, settings file I/O) which blocks
+        // in headless CI containers. Test instances self-register via static
+        // declarations in Tests/RepentePdTests.h, compiled into plugdata_core.
+        if (juce::SystemStats::getEnvironmentVariable("PLUGDATA_CI_TESTS_ONLY", "").isNotEmpty()) {
+            UnitTestRunner pdRunner;
+            pdRunner.runTestsInCategory("RepentePd");
+            int failures = 0;
+            for (int i = 0; i < pdRunner.getNumResults(); ++i)
+                if (auto const* r = pdRunner.getResult(i)) failures += r->failures;
+            std::cerr << "PLUGDATA_CI_TESTS_ONLY: RepentePd tests done, "
+                      << failures << " failure(s); exiting." << std::endl;
+            std::_Exit(failures == 0 ? 0 : 1);
+        }
+#endif
+
         LookAndFeel::getDefaultLookAndFeel().setColour(ResizableWindow::backgroundColourId, Colours::transparentBlack);
 
         auto* settings = SettingsFile::getInstance()->initialise();
