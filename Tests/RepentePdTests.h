@@ -585,7 +585,10 @@ public:
             req.messages  = {{"system", "canvas state"}, {"user", "make sine"}};
             json body = json::parse(p.buildBody(req));
             expect(body.contains("system"), "system field at top level");
-            expect(body["system"] == "canvas state");
+            // system is array of content blocks (the shape that carries cache_control)
+            expect(body["system"].is_array() && body["system"].size() == 1,
+                   "system is array with one text block");
+            expect(body["system"][0]["text"] == "canvas state", "text preserved");
             expect(body["messages"].is_array() && body["messages"].size() == 1,
                    "only user message in messages array");
             expect(body["messages"][0]["role"] == "user");
@@ -599,7 +602,9 @@ public:
             req.model    = "claude-opus-4-7";
             req.messages = {{"system", "alpha"}, {"system", "beta"}, {"user", "hi"}};
             json body = json::parse(p.buildBody(req));
-            std::string sys = body["system"].get<std::string>();
+            expect(body["system"].is_array() && body["system"].size() == 1,
+                   "system collapsed into one content block");
+            std::string sys = body["system"][0]["text"].get<std::string>();
             expect(sys.find("alpha") != std::string::npos);
             expect(sys.find("beta")  != std::string::npos);
             expect(body["messages"].size() == 1);
