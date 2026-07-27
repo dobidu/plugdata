@@ -41,7 +41,11 @@ Next action: Choose next milestone from backlog
 Resume file: .paul/ROADMAP.md
 
 ## Open Items
-- ffmpeg `build_ffmpeg.sh` 10.9→10.13 patch: must commit to pd-else submodule for macOS CI
+- **macOS CI red** — ffmpeg `tls_securetransport.c:168`: `SecIdentityCreate` is 10.12+ but
+  `build_ffmpeg.sh:16` builds with `-mmacosx-version-min=10.9` under `-Werror`. Passed in May,
+  started failing 2026-07-27 (runner SDK moved). The 10.9→10.13 patch is **not** applied locally
+  either. Blocked: the submodule points at upstream `timothyschoen/pd-else`, so fixing it needs a
+  fork + submodule repoint, or an upstream PR. Unrelated to pd-repente code.
 - Battery B — PdParser routing automated (7 tests); LLM→canvas→audio end-to-end needs manual run
 - Battery F — PdParser routing automated (4 tests); LLM→canvas→audio end-to-end needs manual run
 - ObjectTreePanel doesn't scan sub-patches (CanvasSerializer now does — Phase 07-01)

@@ -2,9 +2,9 @@ name: pd-repente CI
 
 on:
   push:
-    branches: [pd-repente-main]
+    branches: [pd-repente-main, develop]
   pull_request:
-    branches: [pd-repente-main]
+    branches: [develop]
   workflow_dispatch:
 
 env:

@@ -26,7 +26,8 @@ reconstructed: true
 
 | Criterion | Status | Evidence |
 |-----------|--------|----------|
-| RepentePd tests run on every push | Pass | `pd-repente CI` run `26187559226` — linux/macos/windows all green |
+| RepentePd tests run headless and gate the job | Pass | `pd-repente CI` run `26187559226` — linux/macos/windows all green |
+| ~~Tests run on every push~~ | **Fail** | See correction below |
 | Test failures fail the job | Pass | Process exits `1` when `failures > 0` |
 | No hang in a headless container | Pass | `StandalonePluginHolder` bypassed; `timeout --signal=KILL 180` guards |
 | No regression in the full build matrix | Pass | `CMake` workflow fails the identical 3 jobs before and after (`Arch-x64`, `Arch-aarch64`, `windows-32-build`) |
@@ -44,6 +45,21 @@ Three commits were required to get the gate working, each fixing a separate caus
 3. `libvdpau-dev` on the runner made bundled ffmpeg compile `hwcontext_vdpau.c`,
    whose `-lvdpau` the ffmpeg CMake never adds — link failure. `4f1a3ee24` drops
    the package rather than patching ffmpeg.
+
+## Correction (2026-07-27)
+
+The original version of this summary claimed the tests "run on every push" and
+cited run `26187559226` as evidence. That was wrong on both counts:
+
+- The workflow was gated to `branches: [pd-repente-main]`, a branch superseded
+  by `develop`. No push to any live branch triggered it.
+- Run `26187559226` was a `workflow_dispatch` — a manual run, not a push trigger.
+  Every green `pd-repente CI` run in the history is a manual dispatch.
+
+Discovered when a push to `feat/ci-run-tests` ran only the `CMake` workflow.
+Trigger corrected to `push: [pd-repente-main, develop]` + `pull_request: [develop]`
+— deliberately not `feat/**`, since each run costs ~45 min of CI time; feature
+branches are covered when they open a PR.
 
 ## Coverage Limits
 
