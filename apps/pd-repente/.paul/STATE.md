@@ -3,23 +3,23 @@
 ## Loop Position
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Phase 06 complete — Milestone 3 complete]
+  —        ✓        ✓     [Phase 07 reconciled retroactively — Milestone 4 complete]
 ```
 
 ## Active Milestone
-Milestone 3 — Multimodal Loop (C3 Tríade) · ✅ COMPLETE
+Milestone 4 — Multi-Provider + CI Hardening · ✅ COMPLETE
 
 ## Active Phase
-Phase 06: multimodal ✅ COMPLETE (3/3 plans)
+Phase 07: providers-ci ✅ COMPLETE (3/3 plans, retro-documented)
 
 ## Active Plan
-— (Phase 06 complete · next milestone TBD)
+— (Phase 07 complete · next milestone TBD)
 
 ## Last Action
-2026-05-05 — Phase 06 UNIFY complete · Milestone 3 complete
+2026-07-26 — UNIFY reconciled 13 off-roadmap commits into Phase 07; STATE git pointers corrected
 
 ## Next Action
-Plan next work (backlog: Style Transfer Sonoro, live coding latency, Tier 3)
+Choose next milestone (backlog: Style Transfer Sonoro, live coding latency, Tier 3)
 
 ## Progress
 - Phase 01: 100% ✅
@@ -28,23 +28,52 @@ Plan next work (backlog: Style Transfer Sonoro, live coding latency, Tier 3)
 - Phase 04: 100% ✅
 - Phase 05: 100% ✅ (4/4 plans)
 - Phase 06: 100% ✅ (3/3 plans)
+- Phase 07: 100% ✅ (3/3 plans, reconstructed)
 
 **Milestone 2: 100% ✅ — V1.0 complete**
 **Milestone 3: 100% ✅ — Multimodal Loop complete**
+**Milestone 4: 100% ✅ — Multi-provider + CI hardening complete**
 
 ## Session Continuity
-Last session: 2026-05-05
-Stopped at: Phase 06 complete, Milestone 3 complete
+Last session: 2026-07-26
+Stopped at: Phase 07 UNIFY complete (retroactive reconcile)
 Next action: Choose next milestone from backlog
 Resume file: .paul/ROADMAP.md
 
 ## Open Items
-- ffmpeg `build_ffmpeg.sh` 10.9→10.13 patch: must commit to pd-else submodule for macOS CI
+- **macOS CI** — ffmpeg `tls_securetransport.c:168`: `SecIdentityCreate` is 10.12+ but
+  `build_ffmpeg.sh:16` pins `-mmacosx-version-min=10.9` under `-Werror`. Passed in May, broke
+  2026-07-27 when the runner SDK moved. Patched **CI-side** (2026-07-27) via
+  `.github/scripts/patch-ffmpeg-macos-target.sh`, run before configure in `macos-build`
+  (pd-repente CI) and `macos-universal-build` (CMake). Not fixed in the submodule — it tracks
+  upstream `timothyschoen/pd-else`, which we can't push to; a fork + repoint was considered and
+  declined. Consequences: **local macOS builds still fail** unless the script is run by hand, and
+  the script hard-fails if upstream restructures the flag, by design. `macos-legacy-build` is
+  deliberately unpatched — it passes at 10.9 and its app target is 10.11, so raising ffmpeg to
+  10.13 there risks a "built for newer macOS" link warning for no gain.
 - Battery B — PdParser routing automated (7 tests); LLM→canvas→audio end-to-end needs manual run
 - Battery F — PdParser routing automated (4 tests); LLM→canvas→audio end-to-end needs manual run
-- CanvasSerializer doesn't recurse into sub-patches — top-level only
+- ObjectTreePanel doesn't scan sub-patches (CanvasSerializer now does — Phase 07-01)
 - Windows/Linux smoke tests — manual, deferred post-V1
-- /listen lambda captures raw Bridge*/PluginProcessor* — edge case: plugin destroyed while 3.2s timer pending
+- RepentePd tests run on Linux CI only; macOS/Windows jobs build but don't test
+- **`windows-32-build` red — this is pd-repente's own bug.** `error C2872: 'ssize_t': ambiguous
+  symbol` compiling `Source/RepentePd/Bridge/RepenteClient.cpp`: `long ssize_t` from
+  `Libraries/cpp-httplib/httplib.h:143` vs `juce::ssize_t` from
+  `Libraries/JUCE/modules/juce_core/maths/juce_MathsFunctions.h:98`. 32-bit MSVC only — the
+  64-bit Windows job passes. Arrived with RepenteClient in Phase 03, not with PR #4. Candidate
+  fixes: include `httplib.h` ahead of the JUCE headers in that TU, or gate with
+  `_SSIZE_T_DEFINED`. Untestable locally (no 32-bit MSVC), so each attempt costs a ~45 min CI
+  round trip — batch it with other Windows work.
+- **`Arch-x64` / `Arch-aarch64` red — plugdata's own, not pd-repente.** `undefined reference to
+  PlugDataWindow::closeAllPatches()`; defined in `Source/Standalone/PlugDataApp.h:233`, declared
+  `Source/Standalone/PlugDataWindow.h:514`, called `:510`. A non-inline definition in a header,
+  so it links only where that header is compiled — Arch's build reaches the call without the
+  definition. Fails identically on `develop`. Fix belongs upstream or in a plugdata-side
+  refactor (move the definition into a .cpp or mark it inline); verify against upstream before
+  touching it.
+- Preset model IDs previous-generation (`claude-opus-4-7`, `claude-sonnet-4-6`); active and error-free, refresh to `claude-opus-5` / `claude-sonnet-5`
+- `/listen` lambda captures raw Bridge*/PluginProcessor* — edge case: plugin destroyed while 3.2s timer pending
+- Branch topology: `develop` is trunk; `pd-repente-main` is stale at `dbb1255b9` and should be deleted or fast-forwarded
 
 ## Accumulated Context
 
@@ -66,7 +95,12 @@ Resume file: .paul/ROADMAP.md
 - SpectralAnalyzer: stateless static methods; juce::dsp::FFT constructed per analyze() call — acceptable for non-real-time /listen (Phase 06-02)
 - audioContext appended to canvas context (newline-separated) in single system message — not a separate message (Phase 06-03)
 - juce::Timer::callAfterDelay for async capture wait — MessageManager has no callAfterDelay (Phase 06-03)
+- CanvasSerializer delegates to patch.getCanvasContent() — libpd binbuf recurses for free (Phase 07-01)
+- Provider owns request/response shape; RepenteClient is transport-only (Phase 07-02)
+- Presets as user-overridable JSON, not hardcoded enums (Phase 07-02)
+- CI test gate lives in PlugDataApp::initialise, before StandalonePluginHolder (Phase 07-03)
+- CMake must emit ENABLE_TESTING=1/0 — bare `ON` is 0 to the preprocessor (Phase 07-03)
 
 ### Git State
-Last commit: ab650b1e0
-Branch: pd-repente-main
+Last commit: 2bbf96810 (`feat/ci-run-tests`), merged to `origin/develop` as 977cd96e5 (PR #3)
+Trunk: `develop`

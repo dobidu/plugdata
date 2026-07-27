@@ -191,6 +191,93 @@ public:
 static PdParserBatteryBTest batteryBTest;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// No-patch detection: responses that must NOT reach the Lua engine.
+// Regression guard for the `unexpected symbol near 'not'` console errors —
+// LUA_BLOCK used to be an unconditional fallback, so prose was executed.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class PdParserNoPatchTest : public UnitTest {
+public:
+    PdParserNoPatchTest() : UnitTest("PdParser: no-patch detection", "RepentePd") {}
+
+    void runTest() override
+    {
+        beginTest("NP-1: plain prose → NO_PATCH/Prose, not LUA_BLOCK");
+        {
+            auto r = PdParser::parse(
+                "I can't create that patch because the sample rate is not specified. "
+                "Could you tell me which rate you want to use?");
+            expect(r.type == ResponseType::NO_PATCH,        "NP-1: NO_PATCH");
+            expect(r.reason == NoPatchReason::Prose,        "NP-1: reason Prose");
+            expect(PdParser::describe(r.reason).isNotEmpty(), "NP-1: has description");
+        }
+
+        beginTest("NP-2: prose containing 'not' and braces stays NO_PATCH");
+        {
+            // The exact shapes that produced Lua syntax errors in the console.
+            auto a = PdParser::parse("This is not a valid request for a patch.");
+            auto b = PdParser::parse("Use the {osc~} object with a rate = 440 setting.");
+            expect(a.type == ResponseType::NO_PATCH, "NP-2a: 'not' prose is NO_PATCH");
+            expect(b.type == ResponseType::NO_PATCH, "NP-2b: brace prose is NO_PATCH");
+        }
+
+        beginTest("NP-3: patch fragment without #N canvas → PatchFragment");
+        {
+            auto r = PdParser::parse(
+                "#X obj 100 100 osc~ 440;\n"
+                "#X obj 100 150 dac~;\n"
+                "#X connect 0 0 1 0;\n");
+            expect(r.type == ResponseType::NO_PATCH,           "NP-3: NO_PATCH");
+            expect(r.reason == NoPatchReason::PatchFragment,   "NP-3: reason PatchFragment");
+        }
+
+        beginTest("NP-4: empty / fence-only response → Empty");
+        {
+            auto r = PdParser::parse("```\n\n```");
+            expect(r.type == ResponseType::NO_PATCH,   "NP-4: NO_PATCH");
+            expect(r.reason == NoPatchReason::Empty,   "NP-4: reason Empty");
+        }
+
+        beginTest("NP-5: real Lua still routes to LUA_BLOCK");
+        {
+            auto viaApi = PdParser::parse(
+                "for i = 1, 4 do\n"
+                "  pds.create('osc~', 100, i * 40)\n"
+                "end");
+            expect(viaApi.type == ResponseType::LUA_BLOCK, "NP-5a: pds.* → LUA_BLOCK");
+
+            auto viaFence = PdParser::parse("```lua\nprint('hello')\n```");
+            expect(viaFence.type == ResponseType::LUA_BLOCK, "NP-5b: ```lua tag → LUA_BLOCK");
+
+            auto viaShape = PdParser::parse("local rate = 440\n");
+            expect(viaShape.type == ResponseType::LUA_BLOCK, "NP-5c: local assignment → LUA_BLOCK");
+        }
+
+        beginTest("NP-6: valid patch and /pds are unaffected");
+        {
+            auto patch = PdParser::parse(
+                "#N canvas 0 0 450 300 12;\n#X obj 100 100 osc~ 440;\n");
+            expect(patch.type == ResponseType::PD_PATCH,      "NP-6a: PD_PATCH");
+            expect(patch.reason == NoPatchReason::None,       "NP-6a: no reason set");
+
+            auto cmds = PdParser::parse("/pds create osc~ 100 100\n");
+            expect(cmds.type == ResponseType::PDS_COMMANDS,   "NP-6b: PDS_COMMANDS");
+        }
+
+        beginTest("NP-7: prose preamble before a fenced patch still yields PD_PATCH");
+        {
+            auto r = PdParser::parse(
+                "Here is a simple sine tone:\n\n"
+                "#N canvas 0 0 450 300 12;\n"
+                "#X obj 100 100 osc~ 440;\n");
+            expect(r.type == ResponseType::PD_PATCH, "NP-7: patch wins over surrounding prose");
+        }
+    }
+};
+
+static PdParserNoPatchTest noPatchTest;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Battery F: pad → drums → pattern → combined (PdParser routing)
 // ─────────────────────────────────────────────────────────────────────────────
 

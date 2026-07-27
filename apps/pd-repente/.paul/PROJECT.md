@@ -59,12 +59,25 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 - ✓ Bridge.send() audioContext param: canvas + spectral injected as single system message — Phase 06-03
 - ✓ /listen [prompt] command: capture 3s audio → analyze → inject → LLM refine — Phase 06-03
 
+## Validated Requirements (shipped — Phase 07)
+
+- ✓ `/listen` promptless sets analyzeOnly — no Lua routing error — Phase 07-01
+- ✓ CanvasSerializer includes sub-patches, graphs, arrays (via libpd binbuf) — Phase 07-01
+- ✓ `/arrange [direction] [step]` configurable layout — Phase 07-01
+- ✓ ILlmProvider abstraction: OpenAI-compatible + native Anthropic Messages API — Phase 07-02
+- ✓ Anthropic system block sent as content-block array with `cache_control` — Phase 07-02
+- ✓ PresetLoader: built-in JSON presets + user override file; `/config preset` — Phase 07-02
+- ✓ Per-provider API key storage; `/config provider openai|anthropic|auto` — Phase 07-02
+- ✓ RepentePd unit tests run headless on every push (Linux CI) — Phase 07-03
+
 ## Active Requirements
 
-- [ ] ObjectTreePanel: full canvas scan (sub-patches) — deferred post-V1
+- [ ] ObjectTreePanel: full canvas scan (sub-patches) — deferred post-V1 (note: CanvasSerializer now recurses; the tree panel still does not)
 - [~] Battery B: 5/5 text→canvas→audio — PdParser routing + fence stripping automated (7 tests); LLM→canvas→audio end-to-end pending manual run
 - [~] Battery F: pad→drums→pattern→combined — PdParser routing automated (4 tests); LLM→canvas→audio end-to-end pending manual run
 - [ ] Windows/Linux smoke tests — post-V1
+- [ ] RepentePd tests on macOS + Windows CI — Linux-only today
+- [ ] Preset model IDs are previous-generation (`claude-opus-4-7`, `claude-sonnet-4-6`) — still active, no error; refresh to `claude-opus-5` / `claude-sonnet-5`
 
 ## Key Decisions
 
@@ -94,6 +107,13 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 | SpectralAnalyzer: stateless static methods, juce::dsp::FFT constructed per call | 06-02 | No state between /listen calls; FFT overhead acceptable for non-real-time use |
 | audioContext appended to canvas context in single system message (newline-separated) | 06-03 | One system message; LLM gets canvas + spectral together |
 | juce::Timer::callAfterDelay for async capture wait (not MessageManager) | 06-03 | Correct JUCE API; MessageManager has no callAfterDelay |
+| CanvasSerializer delegates to `patch.getCanvasContent()` (libpd binbuf) | 07-01 | Correct sub-patch/graph/array recursion with zero traversal code |
+| Provider owns request/response shape; RepenteClient is transport-only | 07-02 | Adding a backend is one file; no transport changes |
+| Presets as JSON with user-override file, not hardcoded enums | 07-02 | Users add backends without a rebuild |
+| Native Anthropic Messages API rather than an OpenAI-compat shim | 07-02 | Enables prompt caching and the correct top-level system-block shape |
+| CI test gate in `PlugDataApp::initialise`, not `Tests.cpp` | 07-03 | Tests.cpp needs a PluginEditor; headless CI never constructs one |
+| CMake emits `ENABLE_TESTING=1/0`, never `ON/OFF` | 07-03 | The preprocessor reads bare `ON` as 0 — silently disabled every `#if ENABLE_TESTING` |
+| Drop `libvdpau-dev` from the Linux runner | 07-03 | Its headers make bundled ffmpeg compile hwcontext_vdpau.c without adding `-lvdpau` |
 
 ## Validated Requirements (shipped — Phase 05)
 
@@ -105,4 +125,4 @@ PAUL · AEGIS (post-Phase 3) · Caveman (Phases 3/5/debug)
 - ✓ /help llm: Ollama + OpenAI + repente server setup examples — Phase 05-04
 
 ---
-*Last updated: 2026-05-05 — Phase 06 complete · Milestone 3 complete*
+*Last updated: 2026-07-26 — Phase 07 reconciled · Milestone 4 complete*

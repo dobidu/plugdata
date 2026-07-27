@@ -81,7 +81,28 @@ Plans: 01 ✓ | 02 ✓ | 03 ✓ (3/3)
 
 AC: `/listen` captures 3s audio, analyzes spectrum, sends canvas + spectral as LLM context. ✓
 
+## Milestone 4: Multi-Provider + CI Hardening ✅ COMPLETE (2026-05-20)
+
+### Phase 07: Provider Abstraction & CI Automation ✅ COMPLETE (2026-05-20)
+Plans: 01 ✓ | 02 ✓ | 03 ✓ (3/3) — *retro-documented 2026-07-26; shipped off-roadmap, no PLAN.md*
+
+**07-01: Post-M3 hardening** — `/listen` analyzeOnly when promptless; ` > ` routing narrowed to
+single-token lhs; CanvasSerializer delegates to libpd binbuf (sub-patches/graphs/arrays now
+included); `/arrange [direction] [step]` configurable.
+**07-02: LLM provider abstraction** — ILlmProvider + OpenAIProvider + AnthropicProvider
+(native Messages API, prompt-cached system block); PresetLoader with user-override JSON;
+`/config provider|preset`; per-provider key storage. RepenteClient reduced to transport.
+**07-03: CI unit-test automation** — `PLUGDATA_CI_TESTS_ONLY=1` gate in `PlugDataApp::initialise`;
+`ENABLE_TESTING=1` numeric fix; xvfb + timeout; RepentePd category runs on every push (Linux).
+
+AC: provider swap without transport changes ✓ · `/config preset claude-opus` switches backend ✓ ·
+tests run and gate every push, `pd-repente CI` green on all three OSes ✓
+
 ## Backlog (post-V1)
+- Fix `ssize_t` ambiguity in RepenteClient.cpp on 32-bit MSVC (cpp-httplib vs juce) — `windows-32-build` red
+- Fix `PlugDataWindow::closeAllPatches()` link error on Arch (header-defined non-inline fn) — upstream-side
+- Refresh preset model IDs to current generation (`claude-opus-5`, `claude-sonnet-5`)
+- Run RepentePd tests on macOS + Windows CI (Linux-only today)
 - Live coding latency (P2 persona)
 - Tier 3: PatchBox / Orange Pi (3B distilled)
 - SC/MAX cross-language (when Repente reincorporates)

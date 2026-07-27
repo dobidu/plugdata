@@ -101,6 +101,20 @@ void Bridge::execute(ParsedResponse const& parsed)
                 pi->executeCommand(editor->pd, "{" + parsed.content + "}");
             break;
         }
+        case ResponseType::NO_PATCH:
+        {
+            // Nothing executable was recognized. Show the model's text rather
+            // than handing it to the Lua engine, which only yields a syntax error.
+            if (editor->pd) {
+                editor->pd->logRepente("repente: " + PdParser::describe(parsed.reason));
+                editor->pd->logRepente(String::fromUTF8("\xe2\x94\x80\xe2\x94\x80 response \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
+                editor->pd->logRepente(parsed.content);
+                editor->pd->logRepente(String::fromUTF8("\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
+                if (parsed.reason == NoPatchReason::PatchFragment)
+                    editor->pd->logRepente("repente: retry, or raise max_tokens with /config");
+            }
+            break;
+        }
         case ResponseType::PDS_COMMANDS:
         {
             if (editor->pd) editor->pd->logRepente("repente: executing commands...");
