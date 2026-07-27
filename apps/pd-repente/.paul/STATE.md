@@ -56,7 +56,21 @@ Resume file: .paul/ROADMAP.md
 - ObjectTreePanel doesn't scan sub-patches (CanvasSerializer now does — Phase 07-01)
 - Windows/Linux smoke tests — manual, deferred post-V1
 - RepentePd tests run on Linux CI only; macOS/Windows jobs build but don't test
-- `CMake` full matrix: `Arch-x64`, `Arch-aarch64`, `windows-32-build` fail — pre-existing, predates Phase 07, unrelated to pd-repente
+- **`windows-32-build` red — this is pd-repente's own bug.** `error C2872: 'ssize_t': ambiguous
+  symbol` compiling `Source/RepentePd/Bridge/RepenteClient.cpp`: `long ssize_t` from
+  `Libraries/cpp-httplib/httplib.h:143` vs `juce::ssize_t` from
+  `Libraries/JUCE/modules/juce_core/maths/juce_MathsFunctions.h:98`. 32-bit MSVC only — the
+  64-bit Windows job passes. Arrived with RepenteClient in Phase 03, not with PR #4. Candidate
+  fixes: include `httplib.h` ahead of the JUCE headers in that TU, or gate with
+  `_SSIZE_T_DEFINED`. Untestable locally (no 32-bit MSVC), so each attempt costs a ~45 min CI
+  round trip — batch it with other Windows work.
+- **`Arch-x64` / `Arch-aarch64` red — plugdata's own, not pd-repente.** `undefined reference to
+  PlugDataWindow::closeAllPatches()`; defined in `Source/Standalone/PlugDataApp.h:233`, declared
+  `Source/Standalone/PlugDataWindow.h:514`, called `:510`. A non-inline definition in a header,
+  so it links only where that header is compiled — Arch's build reaches the call without the
+  definition. Fails identically on `develop`. Fix belongs upstream or in a plugdata-side
+  refactor (move the definition into a .cpp or mark it inline); verify against upstream before
+  touching it.
 - Preset model IDs previous-generation (`claude-opus-4-7`, `claude-sonnet-4-6`); active and error-free, refresh to `claude-opus-5` / `claude-sonnet-5`
 - `/listen` lambda captures raw Bridge*/PluginProcessor* — edge case: plugin destroyed while 3.2s timer pending
 - Branch topology: `develop` is trunk; `pd-repente-main` is stale at `dbb1255b9` and should be deleted or fast-forwarded

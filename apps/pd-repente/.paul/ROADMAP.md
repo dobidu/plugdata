@@ -99,6 +99,8 @@ AC: provider swap without transport changes ✓ · `/config preset claude-opus` 
 tests run and gate every push, `pd-repente CI` green on all three OSes ✓
 
 ## Backlog (post-V1)
+- Fix `ssize_t` ambiguity in RepenteClient.cpp on 32-bit MSVC (cpp-httplib vs juce) — `windows-32-build` red
+- Fix `PlugDataWindow::closeAllPatches()` link error on Arch (header-defined non-inline fn) — upstream-side
 - Refresh preset model IDs to current generation (`claude-opus-5`, `claude-sonnet-5`)
 - Run RepentePd tests on macOS + Windows CI (Linux-only today)
 - Live coding latency (P2 persona)
