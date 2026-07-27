@@ -41,11 +41,16 @@ Next action: Choose next milestone from backlog
 Resume file: .paul/ROADMAP.md
 
 ## Open Items
-- **macOS CI red** — ffmpeg `tls_securetransport.c:168`: `SecIdentityCreate` is 10.12+ but
-  `build_ffmpeg.sh:16` builds with `-mmacosx-version-min=10.9` under `-Werror`. Passed in May,
-  started failing 2026-07-27 (runner SDK moved). The 10.9→10.13 patch is **not** applied locally
-  either. Blocked: the submodule points at upstream `timothyschoen/pd-else`, so fixing it needs a
-  fork + submodule repoint, or an upstream PR. Unrelated to pd-repente code.
+- **macOS CI** — ffmpeg `tls_securetransport.c:168`: `SecIdentityCreate` is 10.12+ but
+  `build_ffmpeg.sh:16` pins `-mmacosx-version-min=10.9` under `-Werror`. Passed in May, broke
+  2026-07-27 when the runner SDK moved. Patched **CI-side** (2026-07-27) via
+  `.github/scripts/patch-ffmpeg-macos-target.sh`, run before configure in `macos-build`
+  (pd-repente CI) and `macos-universal-build` (CMake). Not fixed in the submodule — it tracks
+  upstream `timothyschoen/pd-else`, which we can't push to; a fork + repoint was considered and
+  declined. Consequences: **local macOS builds still fail** unless the script is run by hand, and
+  the script hard-fails if upstream restructures the flag, by design. `macos-legacy-build` is
+  deliberately unpatched — it passes at 10.9 and its app target is 10.11, so raising ffmpeg to
+  10.13 there risks a "built for newer macOS" link warning for no gain.
 - Battery B — PdParser routing automated (7 tests); LLM→canvas→audio end-to-end needs manual run
 - Battery F — PdParser routing automated (4 tests); LLM→canvas→audio end-to-end needs manual run
 - ObjectTreePanel doesn't scan sub-patches (CanvasSerializer now does — Phase 07-01)
