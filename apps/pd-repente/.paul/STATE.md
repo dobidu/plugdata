@@ -3,23 +3,23 @@
 ## Loop Position
 ```
 PLAN ──▶ APPLY ──▶ UNIFY
-  ✓        ✓        ✓     [Phase 06 complete — Milestone 3 complete]
+  —        ✓        ✓     [Phase 07 reconciled retroactively — Milestone 4 complete]
 ```
 
 ## Active Milestone
-Milestone 3 — Multimodal Loop (C3 Tríade) · ✅ COMPLETE
+Milestone 4 — Multi-Provider + CI Hardening · ✅ COMPLETE
 
 ## Active Phase
-Phase 06: multimodal ✅ COMPLETE (3/3 plans)
+Phase 07: providers-ci ✅ COMPLETE (3/3 plans, retro-documented)
 
 ## Active Plan
-— (Phase 06 complete · next milestone TBD)
+— (Phase 07 complete · next milestone TBD)
 
 ## Last Action
-2026-05-05 — Phase 06 UNIFY complete · Milestone 3 complete
+2026-07-26 — UNIFY reconciled 13 off-roadmap commits into Phase 07; STATE git pointers corrected
 
 ## Next Action
-Plan next work (backlog: Style Transfer Sonoro, live coding latency, Tier 3)
+Choose next milestone (backlog: Style Transfer Sonoro, live coding latency, Tier 3)
 
 ## Progress
 - Phase 01: 100% ✅
@@ -28,13 +28,15 @@ Plan next work (backlog: Style Transfer Sonoro, live coding latency, Tier 3)
 - Phase 04: 100% ✅
 - Phase 05: 100% ✅ (4/4 plans)
 - Phase 06: 100% ✅ (3/3 plans)
+- Phase 07: 100% ✅ (3/3 plans, reconstructed)
 
 **Milestone 2: 100% ✅ — V1.0 complete**
 **Milestone 3: 100% ✅ — Multimodal Loop complete**
+**Milestone 4: 100% ✅ — Multi-provider + CI hardening complete**
 
 ## Session Continuity
-Last session: 2026-05-05
-Stopped at: Phase 06 complete, Milestone 3 complete
+Last session: 2026-07-26
+Stopped at: Phase 07 UNIFY complete (retroactive reconcile)
 Next action: Choose next milestone from backlog
 Resume file: .paul/ROADMAP.md
 
@@ -42,9 +44,13 @@ Resume file: .paul/ROADMAP.md
 - ffmpeg `build_ffmpeg.sh` 10.9→10.13 patch: must commit to pd-else submodule for macOS CI
 - Battery B — PdParser routing automated (7 tests); LLM→canvas→audio end-to-end needs manual run
 - Battery F — PdParser routing automated (4 tests); LLM→canvas→audio end-to-end needs manual run
-- CanvasSerializer doesn't recurse into sub-patches — top-level only
+- ObjectTreePanel doesn't scan sub-patches (CanvasSerializer now does — Phase 07-01)
 - Windows/Linux smoke tests — manual, deferred post-V1
-- /listen lambda captures raw Bridge*/PluginProcessor* — edge case: plugin destroyed while 3.2s timer pending
+- RepentePd tests run on Linux CI only; macOS/Windows jobs build but don't test
+- `CMake` full matrix: `Arch-x64`, `Arch-aarch64`, `windows-32-build` fail — pre-existing, predates Phase 07, unrelated to pd-repente
+- Preset model IDs previous-generation (`claude-opus-4-7`, `claude-sonnet-4-6`); active and error-free, refresh to `claude-opus-5` / `claude-sonnet-5`
+- `/listen` lambda captures raw Bridge*/PluginProcessor* — edge case: plugin destroyed while 3.2s timer pending
+- Branch topology: `develop` is trunk; `pd-repente-main` is stale at `dbb1255b9` and should be deleted or fast-forwarded
 
 ## Accumulated Context
 
@@ -66,7 +72,12 @@ Resume file: .paul/ROADMAP.md
 - SpectralAnalyzer: stateless static methods; juce::dsp::FFT constructed per analyze() call — acceptable for non-real-time /listen (Phase 06-02)
 - audioContext appended to canvas context (newline-separated) in single system message — not a separate message (Phase 06-03)
 - juce::Timer::callAfterDelay for async capture wait — MessageManager has no callAfterDelay (Phase 06-03)
+- CanvasSerializer delegates to patch.getCanvasContent() — libpd binbuf recurses for free (Phase 07-01)
+- Provider owns request/response shape; RepenteClient is transport-only (Phase 07-02)
+- Presets as user-overridable JSON, not hardcoded enums (Phase 07-02)
+- CI test gate lives in PlugDataApp::initialise, before StandalonePluginHolder (Phase 07-03)
+- CMake must emit ENABLE_TESTING=1/0 — bare `ON` is 0 to the preprocessor (Phase 07-03)
 
 ### Git State
-Last commit: ab650b1e0
-Branch: pd-repente-main
+Last commit: 2bbf96810 (`feat/ci-run-tests`), merged to `origin/develop` as 977cd96e5 (PR #3)
+Trunk: `develop`
