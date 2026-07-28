@@ -91,7 +91,7 @@ juce::String AnthropicProvider::parseResponse(std::string const& body) const
         std::string type = err.is_object() && err.contains("type")
                               ? err["type"].get<std::string>() + ": "
                               : "";
-        return juce::String("error: ") + juce::String((type + msg).c_str());
+        return juce::String("error: ") + juce::String::fromUTF8((type + msg).c_str());
     }
 
     if (!resp.contains("content") || !resp["content"].is_array() || resp["content"].empty())
@@ -102,7 +102,7 @@ juce::String AnthropicProvider::parseResponse(std::string const& body) const
     for (auto const& block : resp["content"]) {
         if (block.is_object() && block.contains("type") && block["type"] == "text"
             && block.contains("text")) {
-            out += juce::String(block["text"].get<std::string>().c_str());
+            out += juce::String::fromUTF8(block["text"].get<std::string>().c_str());
         }
     }
     if (out.isEmpty())
@@ -118,8 +118,8 @@ juce::String AnthropicProvider::parsePingResponse(std::string const& body, int h
         json j = json::parse(body, nullptr, false);
         if (!j.is_discarded() && j.contains("error") && j["error"].is_object()
             && j["error"].contains("message"))
-            return "HTTP " + juce::String(httpStatus) + " — "
-                 + juce::String(j["error"]["message"].get<std::string>().c_str());
+            return "HTTP " + juce::String(httpStatus) + juce::String::fromUTF8(" \xe2\x80\x94 ")
+                 + juce::String::fromUTF8(j["error"]["message"].get<std::string>().c_str());
         return "HTTP " + juce::String(httpStatus);
     }
     ok = true;

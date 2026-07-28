@@ -440,15 +440,22 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             auto* sf = SettingsFile::getInstance();
             sf->setProperty("repente_url", newUrl);
 
-            // A known cloud host pins the wire format (auth headers, endpoint path, body
-            // shape). Leaving a stale provider here sends OpenAI-shaped requests to
-            // Anthropic (and vice versa), which fails with an opaque 404/401.
-            // Unknown hosts (local servers, proxies) keep whatever provider is set.
+            // The wire format (auth headers, endpoint path, body shape) is pinned by
+            // provider, not host. Leaving a stale provider here sends Anthropic-shaped
+            // requests to an OpenAI-compatible host (or vice versa), which fails with an
+            // opaque 404/401 — this bit us with Groq: its URL contains "openai" but not
+            // the literal "openai.com", so a gate on that substring left a stale Anthropic
+            // provider in place. inferProviderFromUrl() already defaults to OpenAI for any
+            // host that isn't anthropic.com, so just always re-run it on url change instead
+            // of gating on a fixed set of known hosts. A custom host that actually speaks
+            // Anthropic's wire format needs an explicit `/config provider anthropic` after
+            // `/config url` — that's a rare enough setup to not warrant silently keeping a
+            // stale provider for everyone else.
             bool switchedProvider = false;
             auto provider = bridge ? bridge->getConfig().provider
                                    : RepentePd::RepenteClient::Provider::OpenAI;
             juce::String key;
-            if (newUrl.containsIgnoreCase("anthropic.com") || newUrl.containsIgnoreCase("openai.com")) {
+            {
                 auto const inferred = inferProviderFromUrl(newUrl);
                 if (inferred != provider) {
                     provider = inferred;
@@ -476,7 +483,8 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                                        + RepentePd::RepenteClient::providerToString(provider)
                                        + " (inferred from url)");
                 if (key.isEmpty())
-                    pdInstance->logMessage("  no api key stored for this provider — set one with /config key <key>");
+                    pdInstance->logMessage(juce::String::fromUTF8(
+                        "  no api key stored for this provider \xe2\x80\x94 set one with /config key <key>"));
             }
             if (!urlIsLocal(newUrl))
                 pdInstance->logMessage(juce::String::fromUTF8(
@@ -579,7 +587,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                     pdInstance->logRepente("repente: presets exported to "
                                            + RepentePd::PresetLoader::userFile().getFullPathName());
                 else
-                    pdInstance->logError("repente: export failed — " + err);
+                    pdInstance->logError(juce::String::fromUTF8("repente: export failed \xe2\x80\x94 ") + err);
                 return {};
             }
             if (sub == "reload") {
@@ -612,14 +620,14 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 cfg.apiKey    = key;
                 applyConfig(std::move(cfg));
             }
-            pdInstance->logRepente("repente: preset → " + preset.name
+            pdInstance->logRepente(juce::String::fromUTF8("repente: preset \xe2\x86\x92 ") + preset.name
                                    + "  (" + preset.url + ", model=" + preset.model + ")");
             if (preset.requiresKey && key.isEmpty()) {
                 juce::String hint = preset.keyEnv.isNotEmpty()
                                         ? "  expected env: " + preset.keyEnv
                                         : "";
                 pdInstance->logMessage(juce::String::fromUTF8(
-                    "  \xe2\x9a\xa0  this preset requires an API key — set via `/config key <key>`")
+                    "  \xe2\x9a\xa0  this preset requires an API key \xe2\x80\x94 set via `/config key <key>`")
                     + hint);
             }
             if (!urlIsLocal(preset.url))

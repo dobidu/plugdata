@@ -200,7 +200,8 @@ void Executor::execute(CommandResult const& cmd,
 
             juce::String outStr = cmd.args.size() > 2 ? cmd.args[2] : "0";
             juce::String inStr  = cmd.args.size() > 3 ? cmd.args[3] : "0";
-            if (onResult) onResult("connected " + cmd.args[0] + ":" + outStr + " → " + cmd.args[1] + ":" + inStr + ctx());
+            if (onResult) onResult("connected " + cmd.args[0] + ":" + outStr
+                + juce::String::fromUTF8(" \xe2\x86\x92 ") + cmd.args[1] + ":" + inStr + ctx());
             break;
         }
 

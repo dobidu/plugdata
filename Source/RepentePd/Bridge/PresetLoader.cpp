@@ -101,12 +101,12 @@ std::vector<Preset> PresetLoader::parseJson(juce::String const& jsonStr, juce::S
         if (!obj.is_object()) continue;
 
         Preset p;
-        p.name = juce::String(it.key().c_str());
-        if (obj.contains("url")          && obj["url"].is_string())          p.url         = juce::String(obj["url"].get<std::string>().c_str());
-        if (obj.contains("provider")     && obj["provider"].is_string())     p.provider    = juce::String(obj["provider"].get<std::string>().c_str());
-        if (obj.contains("model")        && obj["model"].is_string())        p.model       = juce::String(obj["model"].get<std::string>().c_str());
-        if (obj.contains("description")  && obj["description"].is_string())  p.description = juce::String(obj["description"].get<std::string>().c_str());
-        if (obj.contains("key_env")      && obj["key_env"].is_string())      p.keyEnv      = juce::String(obj["key_env"].get<std::string>().c_str());
+        p.name = juce::String::fromUTF8(it.key().c_str());
+        if (obj.contains("url")          && obj["url"].is_string())          p.url         = juce::String::fromUTF8(obj["url"].get<std::string>().c_str());
+        if (obj.contains("provider")     && obj["provider"].is_string())     p.provider    = juce::String::fromUTF8(obj["provider"].get<std::string>().c_str());
+        if (obj.contains("model")        && obj["model"].is_string())        p.model       = juce::String::fromUTF8(obj["model"].get<std::string>().c_str());
+        if (obj.contains("description")  && obj["description"].is_string())  p.description = juce::String::fromUTF8(obj["description"].get<std::string>().c_str());
+        if (obj.contains("key_env")      && obj["key_env"].is_string())      p.keyEnv      = juce::String::fromUTF8(obj["key_env"].get<std::string>().c_str());
         if (obj.contains("max_tokens")   && obj["max_tokens"].is_number())   p.maxTokens   = obj["max_tokens"].get<int>();
         if (obj.contains("requires_key") && obj["requires_key"].is_boolean()) p.requiresKey = obj["requires_key"].get<bool>();
 

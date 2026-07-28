@@ -172,11 +172,11 @@ juce::String PdParser::describe(NoPatchReason reason)
 {
     switch (reason) {
         case NoPatchReason::Prose:
-            return "no patch in response — the model answered in prose";
+            return juce::String::fromUTF8("no patch in response \xe2\x80\x94 the model answered in prose");
         case NoPatchReason::PatchFragment:
-            return "patch fragment without a '#N canvas' header — generation was likely truncated";
+            return juce::String::fromUTF8("patch fragment without a '#N canvas' header \xe2\x80\x94 generation was likely truncated");
         case NoPatchReason::InvalidLua:
-            return "response looked like code but isn't valid Lua — possibly another language";
+            return juce::String::fromUTF8("response looked like code but isn't valid Lua \xe2\x80\x94 possibly another language");
         case NoPatchReason::Empty:
             return "empty response";
         case NoPatchReason::None:
