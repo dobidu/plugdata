@@ -20,7 +20,7 @@ public:
     explicit Bridge(PluginEditor* editor);
     ~Bridge() = default;
 
-    // Fire-and-forget. Logs "repente: thinking..." (or "analyzing...") immediately.
+    // Fire-and-forget. Logs "<model>: thinking..." (or "analyzing...") immediately.
     // onDone(success) fires on message thread when complete.
     // analyzeOnly=true: response logged as plain text, PdParser bypassed.
     // Returns false if client is busy.
@@ -44,6 +44,10 @@ public:
 
 private:
     void execute(ParsedResponse const& parsed);
+
+    // Console prefix for this turn's log lines, e.g. "claude-sonnet-4-6: ".
+    // Falls back to "repente: " if no model is configured.
+    [[nodiscard]] juce::String logLabel() const;
 
     struct HistoryMessage { juce::String role; juce::String content; };
     // Kept deliberately short: each assistant entry is a full patch text, not a

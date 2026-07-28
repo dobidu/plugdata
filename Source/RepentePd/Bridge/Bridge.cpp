@@ -23,6 +23,12 @@ RepenteClient::Config const& Bridge::getConfig() const { return client.getConfig
 bool Bridge::isBusy() const { return client.isBusy(); }
 void Bridge::ping(std::function<void(bool, juce::String)> callback) { client.ping(std::move(callback)); }
 
+juce::String Bridge::logLabel() const
+{
+    auto const& model = client.getConfig().model;
+    return (model.isNotEmpty() ? model : juce::String("repente")) + ": ";
+}
+
 bool Bridge::send(juce::String const& prompt, bool analyzeOnly,
                   std::function<void(bool)> onDone, juce::String const& audioContext)
 {
@@ -45,7 +51,7 @@ bool Bridge::send(juce::String const& prompt, bool analyzeOnly,
         context += (context.isNotEmpty() ? "\n" : "") + audioContext;
 
     if (editor && editor->pd)
-        editor->pd->logRepente(analyzeOnly ? "repente: analyzing..." : "repente: thinking...");
+        editor->pd->logRepente(logLabel() + (analyzeOnly ? "analyzing..." : "thinking..."));
 
     // Build full messages array: system (canvas + audio context) + history + new user prompt
     std::vector<RepenteClient::Message> messages;
@@ -84,7 +90,7 @@ bool Bridge::send(juce::String const& prompt, bool analyzeOnly,
         verboseTurnId = VerboseLog::record(newTurnDump);
         // Trailing "[#N]" (not a leading "verbose #N -") so the prompt itself
         // reads naturally; Console.h's right-click handler parses it back out.
-        editor->pd->logRepente("repente: " + prompt + " [#" + juce::String(verboseTurnId) + "]");
+        editor->pd->logRepente(logLabel() + prompt + " [#" + juce::String(verboseTurnId) + "]");
     }
 
     std::function<void(juce::String)> onRawRequest;
@@ -143,14 +149,14 @@ void Bridge::execute(ParsedResponse const& parsed)
         case ResponseType::PD_PATCH:
         {
             if (parsed.discardedLines > 0 && editor->pd)
-                editor->pd->logRepente("repente: discarded " + juce::String(parsed.discardedLines)
+                editor->pd->logRepente(logLabel() + "discarded " + juce::String(parsed.discardedLines)
                     + " line" + (parsed.discardedLines == 1 ? "" : "s")
                     + " of non-patch text around the patch");
             if (mergeMode) {
-                if (editor->pd) editor->pd->logRepente("repente: merging patch...");
+                if (editor->pd) editor->pd->logRepente(logLabel() + "merging patch...");
                 PatchMerger::merge(parsed.content, editor);
             } else {
-                if (editor->pd) editor->pd->logRepente("repente: opening patch...");
+                if (editor->pd) editor->pd->logRepente(logLabel() + "opening patch...");
                 editor->getTabComponent().openPatch(parsed.content);
                 editor->refreshObjectsPanel();
             }
@@ -158,14 +164,14 @@ void Bridge::execute(ParsedResponse const& parsed)
         }
         case ResponseType::LUA_BLOCK:
         {
-            if (editor->pd) editor->pd->logRepente("repente: running Lua...");
+            if (editor->pd) editor->pd->logRepente(logLabel() + "running Lua...");
             if (auto* pi = editor->getPromptInput())
                 pi->executeCommand(editor->pd, "{" + parsed.content + "}");
             break;
         }
         case ResponseType::PDS_COMMANDS:
         {
-            if (editor->pd) editor->pd->logRepente("repente: executing commands...");
+            if (editor->pd) editor->pd->logRepente(logLabel() + "executing commands...");
             if (auto* pi = editor->getPromptInput()) {
                 // Only run lines that are actually /pds commands — skip any
                 // stray label/preamble line PdParser tolerated to classify
@@ -185,12 +191,12 @@ void Bridge::execute(ParsedResponse const& parsed)
             // Nothing executable was recognized. Show the model's text rather
             // than handing it to the Lua engine, which only yields a syntax error.
             if (editor->pd) {
-                editor->pd->logError("repente: " + PdParser::describe(parsed.reason));
+                editor->pd->logError(logLabel() + PdParser::describe(parsed.reason));
                 editor->pd->logRepente(String::fromUTF8("\xe2\x94\x80\xe2\x94\x80 response \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
                 editor->pd->logRepente(parsed.content);
                 editor->pd->logRepente(String::fromUTF8("\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"));
                 if (parsed.reason == NoPatchReason::PatchFragment)
-                    editor->pd->logRepente("repente: retry, or raise max_tokens with /config");
+                    editor->pd->logRepente(logLabel() + "retry, or raise max_tokens with /config");
             }
             break;
         }
