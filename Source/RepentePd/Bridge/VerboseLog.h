@@ -13,6 +13,7 @@ namespace RepentePd {
 struct VerboseTurn {
     juce::String request;
     juce::String response;
+    double elapsedMs = 0.0;
 };
 
 // Runtime-only registry keyed by an incrementing turn id, so the console can
@@ -32,11 +33,12 @@ public:
         return id;
     }
 
-    static void setResponse(int turnId, juce::String const& response)
+    static void setResponse(int turnId, juce::String const& response, double elapsedMs = 0.0)
     {
         for (auto& [id, turn] : turns) {
             if (id == turnId) {
                 turn.response = response;
+                turn.elapsedMs = elapsedMs;
                 return;
             }
         }

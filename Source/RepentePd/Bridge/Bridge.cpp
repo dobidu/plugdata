@@ -100,8 +100,20 @@ bool Bridge::send(juce::String const& prompt, bool analyzeOnly,
         };
     }
 
-    return client.send(messages, [this, analyzeOnly, prompt, verboseTurnId, onDone](juce::String const& response) {
+    // Measured around client.send() (the actual network round trip), not the
+    // message-building above, so this reflects what a model/host is actually
+    // costing you — the number users want when comparing providers.
+    double const requestStartMs = juce::Time::getMillisecondCounterHiRes();
+
+    return client.send(messages, [this, analyzeOnly, prompt, verboseTurnId, onDone, requestStartMs](juce::String const& response) {
         jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+        double const elapsedMs = juce::Time::getMillisecondCounterHiRes() - requestStartMs;
+        if (editor && editor->pd)
+            editor->pd->logRepente(logLabel() + juce::String(elapsedMs / 1000.0, 2) + "s");
+
+        if (verboseTurnId >= 0)
+            VerboseLog::setResponse(verboseTurnId, response, elapsedMs);
 
         if (response.startsWith("error:")) {
             if (editor && editor->pd)
@@ -109,9 +121,6 @@ bool Bridge::send(juce::String const& prompt, bool analyzeOnly,
             if (onDone) onDone(false);
             return;
         }
-
-        if (verboseTurnId >= 0)
-            VerboseLog::setResponse(verboseTurnId, response);
 
         if (analyzeOnly) {
             if (onDone) onDone(true);

@@ -207,7 +207,8 @@ public:
                                 textEditor->setMultiLine(true);
                                 textEditor->setReadOnly(true);
                                 textEditor->setScrollbarsShown(true);
-                                textEditor->setText("== request ==\n" + turn.request + "\n\n== response ==\n" + turn.response);
+                                textEditor->setText("== request ==\n" + turn.request
+                                    + "\n\n== response (" + juce::String(turn.elapsedMs / 1000.0, 2) + "s) ==\n" + turn.response);
                                 textEditor->setSize(500, 400);
                                 if (auto* editor = findParentComponentOfClass<PluginEditor>())
                                     editor->showCalloutBox(std::move(textEditor), getScreenBounds());
