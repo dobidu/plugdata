@@ -5,6 +5,8 @@
 #include "RepentePd/Bridge/OpenAIProvider.h"
 #include "RepentePd/Bridge/AnthropicProvider.h"
 #include "RepentePd/Bridge/PresetLoader.h"
+#include "RepentePd/Bridge/RepenteClient.h"
+#include "RepentePd/Bridge/PromptNormalizer.h"
 #include "RepentePd/SpectralAnalyzer.h"
 #include <cmath>
 #include <nlohmann/json.hpp>
@@ -276,6 +278,101 @@ public:
 };
 
 static PdParserNoPatchTest noPatchTest;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Patch extraction: a valid patch plus trailing junk must yield only the patch.
+// Regression guard for the "no such object" cascade — PdParser::parse used a
+// `contains("#N canvas")` test and returned the whole response, so SuperCollider
+// appended after a patch reached openPatch() and each line became a bogus object.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class PdParserExtractTest : public UnitTest {
+public:
+    PdParserExtractTest() : UnitTest("PdParser: patch extraction", "RepentePd") {}
+
+    void runTest() override
+    {
+        beginTest("EX-1: trailing SuperCollider after a valid patch is dropped");
+        {
+            // Verbatim from the reported console session (repente:v0.5).
+            auto r = PdParser::parse(
+                "#N canvas 345 127 458 267 10;\n"
+                "#X obj 108 69 osc~ 440;\n"
+                "#X obj 108 131 dac~;\n"
+                "#X obj 120 107 bp~ 1000 10;\n"
+                "#X connect 0 0 4 0;\n"
+                "\n"
+                "// Now add another lowpass with a cutoff of 600 cycles\n"
+                "(\n"
+                "Ndef('lpf', { arg freq; \n"
+                "\tvar in = InFeedback.ar(0,2);\n"
+                "\tOut.ar(0,out);\n"
+                "})\n"
+                ");\n"
+                "MIDIIn.connectControls;\n");
+            expect(r.type == ResponseType::PD_PATCH,        "EX-1: still PD_PATCH");
+            expect(!r.content.contains("Ndef"),             "EX-1: SuperCollider dropped");
+            expect(!r.content.contains("MIDIIn"),           "EX-1: trailing call dropped");
+            expect(!r.content.contains("//"),               "EX-1: comment dropped");
+            expect(r.content.contains("bp~ 1000 10"),       "EX-1: patch body kept");
+            expect(r.content.contains("#N canvas"),         "EX-1: header kept");
+            expect(r.discardedLines == 8,                   "EX-1: counted 8 dropped lines");
+        }
+
+        beginTest("EX-2: leading prose before the header is dropped");
+        {
+            auto r = PdParser::parse(
+                "Here is a simple sine tone:\n"
+                "\n"
+                "#N canvas 0 0 450 300 12;\n"
+                "#X obj 100 100 osc~ 440;\n");
+            expect(r.type == ResponseType::PD_PATCH,           "EX-2: PD_PATCH");
+            expect(r.content.startsWith("#N canvas"),          "EX-2: starts at header");
+            expect(!r.content.contains("simple sine tone"),    "EX-2: preamble dropped");
+            expect(r.discardedLines == 1,                      "EX-2: counted 1 dropped line");
+        }
+
+        beginTest("EX-3: a clean patch is passed through untouched");
+        {
+            juce::String const clean =
+                "#N canvas 0 0 450 300 12;\n"
+                "#X obj 100 100 osc~ 440;\n"
+                "#X obj 100 150 dac~;\n"
+                "#X connect 0 0 1 0;";
+            auto r = PdParser::parse(clean);
+            expect(r.type == ResponseType::PD_PATCH, "EX-3: PD_PATCH");
+            expect(r.content == clean,               "EX-3: byte-identical");
+            expect(r.discardedLines == 0,            "EX-3: nothing discarded");
+        }
+
+        beginTest("EX-4: a record wrapping across lines survives");
+        {
+            // #X text without a terminating ';' continues on the next line; the
+            // walker must not treat the continuation as the end of the patch.
+            auto r = PdParser::parse(
+                "#N canvas 0 0 450 300 12;\n"
+                "#X text 20 20 this comment wraps\n"
+                "onto a second line;\n"
+                "#X obj 100 100 osc~ 440;\n");
+            expect(r.content.contains("onto a second line"), "EX-4: continuation kept");
+            expect(r.content.contains("osc~ 440"),           "EX-4: record after it kept");
+            expect(r.discardedLines == 0,                    "EX-4: nothing discarded");
+        }
+
+        beginTest("EX-5: blank lines between records don't end the patch");
+        {
+            auto r = PdParser::parse(
+                "#N canvas 0 0 450 300 12;\n"
+                "#X obj 100 100 osc~ 440;\n"
+                "\n"
+                "#X obj 100 150 dac~;\n");
+            expect(r.content.contains("dac~"),  "EX-5: record after blank kept");
+            expect(r.discardedLines == 0,       "EX-5: blanks aren't counted");
+        }
+    }
+};
+
+static PdParserExtractTest extractTest;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Battery F: pad → drums → pattern → combined (PdParser routing)
@@ -845,3 +942,150 @@ public:
     }
 };
 static PresetLoaderTest presetLoaderTest;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PromptNormalizer
+// ─────────────────────────────────────────────────────────────────────────────
+
+class PromptNormalizerTest : public UnitTest {
+public:
+    PromptNormalizerTest() : UnitTest("PromptNormalizer", "RepentePd") {}
+
+    void runTest() override
+    {
+        using Intent = PromptNormalizer::Intent;
+
+        beginTest("training-set prompts pass through byte-identical");
+        {
+            // The five phrasings the model was trained on — the rewriter must
+            // never touch a prompt that already names the language.
+            char const* paperPrompts[] = {
+                "Write a Pure Data patch for a simple FM synthesizer with a sine carrier modulated by another sine oscillator.",
+                "Create a Pure Data patch that implements Karplus-Strong plucked string synthesis.",
+                "Explain Pd FM to beginner",
+                "Convert SC Saw+RLPF to Pd",
+                "What does Pd noise+bp~ do?",
+            };
+            for (auto const* p : paperPrompts) {
+                expect(PromptNormalizer::classify(p) == Intent::AlreadyQualified, p);
+                expect(PromptNormalizer::normalize(p) == juce::String(p), p);
+            }
+        }
+
+        beginTest("qualifier match is word-bounded");
+        {
+            // "pd" inside another word must not count as already-qualified.
+            expect(PromptNormalizer::classify("update the filter") != Intent::AlreadyQualified);
+            expect(PromptNormalizer::classify("speed things up")   != Intent::AlreadyQualified);
+            expect(PromptNormalizer::classify("make it plugdata")  == Intent::AlreadyQualified);
+        }
+
+        beginTest("create: verb stripped, reframed as a patch request");
+        {
+            expect(PromptNormalizer::classify("make an FM synth") == Intent::Create);
+            expect(PromptNormalizer::normalize("make an FM synth")
+                   == "Write a Pure Data patch for an FM synth.");
+            // Stacked verb phrase + indirect object both get stripped.
+            expect(PromptNormalizer::normalize("please write me a granular sampler")
+                   == "Write a Pure Data patch for a granular sampler.");
+            // Bare noun phrase, no leading verb.
+            expect(PromptNormalizer::normalize("FM synth with two sine oscillators")
+                   == "Write a Pure Data patch for FM synth with two sine oscillators.");
+            // Relative clause takes the "Create a Pure Data patch that ..." form.
+            expect(PromptNormalizer::normalize("that implements Karplus-Strong")
+                   == "Create a Pure Data patch that implements Karplus-Strong.");
+        }
+
+        beginTest("modify: add-form vs general frame");
+        {
+            expect(PromptNormalizer::classify("add reverb") == Intent::Modify);
+            expect(PromptNormalizer::normalize("add reverb")
+                   == "Add reverb to the Pure Data patch.");
+            // Already has its own "to ..." target, so the add-form would garble it.
+            expect(PromptNormalizer::normalize("connect the osc to the dac")
+                   == "In this Pure Data patch, connect the osc to the dac.");
+        }
+
+        beginTest("analyze: qualifies the noun in place");
+        {
+            expect(PromptNormalizer::classify("what does this patch do?") == Intent::Analyze);
+            expect(PromptNormalizer::normalize("what does this patch do?")
+                   == "What does this Pure Data patch do?");
+            expect(PromptNormalizer::normalize("what does noise+bp~ do?")
+                   == "In Pure Data, what does noise+bp~ do?");
+            // A trailing "?" is enough — without it this would classify as Create.
+            expect(PromptNormalizer::classify("can you tell me about bp~?") == Intent::Analyze);
+        }
+
+        beginTest("convert: target language appended");
+        {
+            expect(PromptNormalizer::classify("convert this SC saw") == Intent::Convert);
+            expect(PromptNormalizer::normalize("convert this SC saw")
+                   == "Convert this SC saw to Pure Data.");
+        }
+
+        beginTest("empty and whitespace-only prompts are returned unchanged");
+        {
+            expect(PromptNormalizer::normalize("")     == "");
+            expect(PromptNormalizer::normalize("   ")  == "   ");
+        }
+    }
+};
+static PromptNormalizerTest promptNormalizerTest;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RepenteClient URL composition
+// ─────────────────────────────────────────────────────────────────────────────
+
+class RepenteClientUrlTest : public UnitTest {
+public:
+    RepenteClientUrlTest() : UnitTest("RepenteClientUrl", "RepentePd") {}
+
+    void runTest() override
+    {
+        juce::String const anthropic = "/v1/messages";
+        juce::String const openai    = "/v1/chat/completions";
+
+        beginTest("bare host + endpoint");
+        {
+            expect(RepenteClient::buildUrl("https://api.anthropic.com", anthropic)
+                   == "https://api.anthropic.com/v1/messages");
+            expect(RepenteClient::buildUrl("http://localhost:11434", openai)
+                   == "http://localhost:11434/v1/chat/completions");
+        }
+
+        beginTest("base already carrying /v1 does not double it");
+        {
+            // Regression: this produced /v1/v1/chat/completions, which 404s.
+            expect(RepenteClient::buildUrl("https://api.anthropic.com/v1", anthropic)
+                   == "https://api.anthropic.com/v1/messages");
+            expect(RepenteClient::buildUrl("https://api.openai.com/v1", openai)
+                   == "https://api.openai.com/v1/chat/completions");
+        }
+
+        beginTest("trailing slashes are ignored");
+        {
+            expect(RepenteClient::buildUrl("https://api.anthropic.com/", anthropic)
+                   == "https://api.anthropic.com/v1/messages");
+            expect(RepenteClient::buildUrl("https://api.anthropic.com/v1//", anthropic)
+                   == "https://api.anthropic.com/v1/messages");
+            expect(RepenteClient::buildUrl("  https://api.anthropic.com  ", anthropic)
+                   == "https://api.anthropic.com/v1/messages");
+        }
+
+        beginTest("proxy prefixes are preserved");
+        {
+            expect(RepenteClient::buildUrl("https://proxy.internal/api", anthropic)
+                   == "https://proxy.internal/api/v1/messages");
+            expect(RepenteClient::buildUrl("https://proxy.internal/api/v1", anthropic)
+                   == "https://proxy.internal/api/v1/messages");
+        }
+
+        beginTest("base spelling out the full endpoint is left alone");
+        {
+            expect(RepenteClient::buildUrl("https://api.anthropic.com/v1/messages", anthropic)
+                   == "https://api.anthropic.com/v1/messages");
+        }
+    }
+};
+static RepenteClientUrlTest repenteClientUrlTest;

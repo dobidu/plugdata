@@ -46,7 +46,13 @@ private:
     void execute(ParsedResponse const& parsed);
 
     struct HistoryMessage { juce::String role; juce::String content; };
-    static constexpr int MAX_HISTORY_TURNS = 20;
+    // Kept deliberately short: each assistant entry is a full patch text, not a
+    // summary, so this is thousands of tokens replayed on top of the canvas
+    // context every request. 20 turns was safe while history was disabled; live,
+    // it crowds out the prompt on the local Repente checkpoint (7B, and already
+    // truncating against a 512-token generation cap) long before it does on the
+    // cloud baselines. Raise only alongside a token budget or a trim strategy.
+    static constexpr int MAX_HISTORY_TURNS = 6;
 
     void saveHistory() const;
     void loadHistory();

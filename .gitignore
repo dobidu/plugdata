@@ -11,3 +11,13 @@ cmake-build-release
 .cache/
 
 *.swp
+
+.fake
+
+# Python bytecode from Resources/Scripts
+__pycache__/
+*.pyc
+
+# pd-repente runtime debug output
+repente_diag.log
+build_log.txt

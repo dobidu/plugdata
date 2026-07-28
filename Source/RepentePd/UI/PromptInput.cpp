@@ -240,6 +240,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  /config key <key>           \xe2\x86\x92 set API key (current provider)\n"
                 "  /config history on|off      \xe2\x86\x92 persist history across sessions\n"
                 "  /config autoplace on|off    \xe2\x86\x92 cursor placement (off = LLM coords)\n"
+                "  /config verbose on|off      \xe2\x86\x92 log full request + response (debug)\n"
                 "  /config test                \xe2\x86\x92 ping server\n"
                 "  /config                     \xe2\x86\x92 show current settings\n"
                 "\n"
@@ -319,7 +320,10 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
         juce::String prompt = msg.substring(7).trim();
         bool const analyzeOnly = prompt.isEmpty();
         if (analyzeOnly)
-            prompt = "I just heard the audio output. Describe the spectral content and suggest how to improve it.";
+            // Names Pure Data explicitly so PromptNormalizer passes it through
+            // untouched — otherwise it reads as a creation request and gets
+            // rewritten into "Write a Pure Data patch for I just heard...".
+            prompt = "I just heard the audio output of this Pure Data patch. Describe the spectral content and suggest how to improve it.";
 
         if (!pluginEditor || !pluginEditor->pd) return {};
         pluginEditor->pd->startAudioCapture(3.0f);
@@ -406,6 +410,8 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             juce::String anthropicKey = sf->hasProperty("repente_anthropic_key") ? sf->getProperty<juce::String>("repente_anthropic_key") : juce::String();
             bool const persist    = sf->getProperty<bool>("repente_persist_history");
             bool const autoplace  = sf->getProperty<bool>("repente_autoplace");
+            bool const verbose    = sf->getProperty<bool>("repente_verbose");
+            bool const rewrite    = sf->getProperty<bool>("repente_rewrite");
 
             juce::String urlNote;
             if (cfg.url.contains("11434"))                                urlNote = "  (Ollama)";
@@ -423,20 +429,55 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  openai key:    " + juce::String(openaiKey.isNotEmpty()    ? "****" : "(not set)") + "\n"
                 "  anthropic key: " + juce::String(anthropicKey.isNotEmpty() ? "****" : "(not set)") + "\n"
                 "  history:    " + juce::String(persist ? "persist" : "session-only (default)") + "\n"
-                "  autoplace:  " + juce::String(autoplace ? "on (default)" : "off"));
+                "  autoplace:  " + juce::String(autoplace ? "on (default)" : "off") + "\n"
+                "  verbose:    " + juce::String(verbose ? "on" : "off (default)") + "\n"
+                "  rewrite:    " + juce::String(rewrite ? "on (default)" : "off"));
             return {};
         }
 
         if (args.startsWith("url ")) {
             juce::String newUrl = args.substring(4).trim();
-            SettingsFile::getInstance()->setProperty("repente_url", newUrl);
-            SettingsFile::getInstance()->saveSettings();
+            auto* sf = SettingsFile::getInstance();
+            sf->setProperty("repente_url", newUrl);
+
+            // A known cloud host pins the wire format (auth headers, endpoint path, body
+            // shape). Leaving a stale provider here sends OpenAI-shaped requests to
+            // Anthropic (and vice versa), which fails with an opaque 404/401.
+            // Unknown hosts (local servers, proxies) keep whatever provider is set.
+            bool switchedProvider = false;
+            auto provider = bridge ? bridge->getConfig().provider
+                                   : RepentePd::RepenteClient::Provider::OpenAI;
+            juce::String key;
+            if (newUrl.containsIgnoreCase("anthropic.com") || newUrl.containsIgnoreCase("openai.com")) {
+                auto const inferred = inferProviderFromUrl(newUrl);
+                if (inferred != provider) {
+                    provider = inferred;
+                    switchedProvider = true;
+                    sf->setProperty("repente_provider",
+                                    RepentePd::RepenteClient::providerToString(provider));
+                    key = sf->hasProperty(currentKeyProperty(provider))
+                              ? sf->getProperty<juce::String>(currentKeyProperty(provider)) : juce::String();
+                }
+            }
+
+            sf->saveSettings();
             if (bridge) {
                 auto cfg = bridge->getConfig();
                 cfg.url = newUrl;
+                if (switchedProvider) {
+                    cfg.provider = provider;
+                    cfg.apiKey   = key;
+                }
                 applyConfig(std::move(cfg));
             }
             pdInstance->logRepente(juce::String::fromUTF8("repente: url \xe2\x86\x92 ") + newUrl);
+            if (switchedProvider) {
+                pdInstance->logRepente(juce::String::fromUTF8("repente: provider \xe2\x86\x92 ")
+                                       + RepentePd::RepenteClient::providerToString(provider)
+                                       + " (inferred from url)");
+                if (key.isEmpty())
+                    pdInstance->logMessage("  no api key stored for this provider — set one with /config key <key>");
+            }
             if (!urlIsLocal(newUrl))
                 pdInstance->logMessage(juce::String::fromUTF8(
                     "  \xe2\x9a\xa0  remote URL: canvas patch data will be sent to this server"));
@@ -621,6 +662,22 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             return {};
         }
 
+        if (args == "verbose on" || args == "verbose off") {
+            bool const on = (args == "verbose on");
+            SettingsFile::getInstance()->setProperty("repente_verbose", on);
+            SettingsFile::getInstance()->saveSettings();
+            pdInstance->logRepente(juce::String("repente: verbose ") + (on ? "on" : "off"));
+            return {};
+        }
+
+        if (args == "rewrite on" || args == "rewrite off") {
+            bool const on = (args == "rewrite on");
+            SettingsFile::getInstance()->setProperty("repente_rewrite", on);
+            SettingsFile::getInstance()->saveSettings();
+            pdInstance->logRepente(juce::String("repente: rewrite ") + (on ? "on" : "off"));
+            return {};
+        }
+
         pdInstance->logMessage(juce::String::fromUTF8(
             "usage:\n"
             "  /config                          \xe2\x86\x92 show current config\n"
@@ -635,6 +692,8 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             "  /config key <key>                \xe2\x86\x92 set API key (current provider)\n"
             "  /config history on|off           \xe2\x86\x92 persist history across sessions\n"
             "  /config autoplace on|off         \xe2\x86\x92 cursor placement (off = use LLM coords)\n"
+            "  /config verbose on|off           \xe2\x86\x92 log full request + response (debug)\n"
+            "  /config rewrite on|off           \xe2\x86\x92 rephrase prompts as Pure Data requests\n"
             "  /config test                     \xe2\x86\x92 test server connection"));
         return {};
     }

@@ -244,6 +244,7 @@ Prints the pd-file snapshot that will be sent to the LLM as system context on th
 | `/config test` | Ping server and verify connectivity |
 | `/config history on\|off` | Persist conversation history across restarts |
 | `/config autoplace on\|off` | Auto-placement (on) vs. LLM-specified coordinates (off) |
+| `/config rewrite on\|off` | Rephrase prompts as Pure Data requests before sending (on by default) |
 | `/canvas` | Print serialized canvas state (debug) |
 | `/help [topic]` | Help topics: `pds` · `sugar` · `lua` · `llm` · `commands` · `builtin` |
 | `/clear` | Clear console |
@@ -403,15 +404,38 @@ startCapture / feedAudio / takeCapture
          └─ system message = canvas + "\n" + spectralText
 ```
 
+### Prompt rewriting
+
+Repente's training prompts name the target language inside the sentence
+("Write a Pure Data patch for a simple FM synthesizer…"), but users type
+"make an FM synth" — and an unqualified request often comes back as
+SuperCollider or Max. `PromptNormalizer` closes that gap by rephrasing the
+request into the shape the model expects, rather than instructing it with a
+system prompt (there is none; the system message carries canvas + spectral
+context only):
+
+| Intent | Trigger | Rewrite |
+|---|---|---|
+| Already qualified | Mentions `pd` / `pure data` / `puredata` / `plugdata` | Passed through byte-identical |
+| Convert | `convert` / `translate` / `port` | `Convert this SC saw` → `Convert this SC saw to Pure Data.` |
+| Analyze | Ends with `?`, or opens with `what` / `how` / `why` / `explain` / `describe` / `analyze` | `what does this patch do?` → `What does this Pure Data patch do?` |
+| Modify | Opens with `add` / `connect` / `remove` / `change` / … | `add reverb` → `Add reverb to the Pure Data patch.` |
+| Create | Default | `make an FM synth` → `Write a Pure Data patch for an FM synth.` |
+
+The rewrite applies to free text and `/analyze` alike. `/config rewrite off`
+sends the raw prompt instead, and `/config verbose on` shows the exact
+outgoing text in the console popup.
+
 ### Response routing
 
-`PdParser` auto-detects LLM response format:
+`PdParser` auto-detects the format of the reply:
 
 | Detected format | Route | Effect |
 |---|---|---|
-| Starts with `#N canvas` | PD_PATCH | Open new tab (or merge via PatchMerger) |
+| Contains `#N canvas` | PD_PATCH | Open new tab (or merge via PatchMerger) |
 | Lines starting with `/pds` | PDS_COMMANDS | Execute via Executor |
-| Anything else | LUA_BLOCK | Run in Lua engine |
+| ` ```lua ` fence or Lua-shaped code that parses | LUA_BLOCK | Run in Lua engine |
+| Anything else | NO_PATCH | Shown as text with a reason (prose · truncated patch fragment · invalid Lua · empty) |
 
 `/analyze` and `/listen` responses bypass `PdParser` for analysis display — but `/listen` with a generation prompt goes through the normal routing.
 

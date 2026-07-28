@@ -36,8 +36,13 @@ public:
     explicit RepenteClient(Config cfg = {});
     ~RepenteClient() { cancelled->store(true); }
 
+    // onRawRequest, if given, is invoked synchronously (before send() returns,
+    // on the calling thread) with a curl-style dump of the literal HTTP
+    // request about to be made — method, URL, headers (secrets redacted),
+    // and the exact JSON body — for debugging what actually goes over the wire.
     bool send(std::vector<Message> const& messages,
-              std::function<void(juce::String)> callback);
+              std::function<void(juce::String)> callback,
+              std::function<void(juce::String)> onRawRequest = {});
 
     void ping(std::function<void(bool, juce::String)> callback);
 
@@ -51,6 +56,12 @@ public:
     // Convert string ↔ enum. Used by config commands and SettingsFile.
     static juce::String  providerToString(Provider p);
     static Provider      providerFromString(juce::String const& s);
+
+    // Full request URL from the configured base + a provider endpoint path.
+    // A base that already carries the API version ("https://api.anthropic.com/v1")
+    // must not produce ".../v1/v1/messages" — the duplicated segment is dropped.
+    // Public for tests.
+    static juce::String buildUrl(juce::String const& base, juce::String const& endpointPath);
 
 private:
     Config config;
