@@ -108,6 +108,7 @@ std::vector<Preset> PresetLoader::parseJson(juce::String const& jsonStr, juce::S
         if (obj.contains("description")  && obj["description"].is_string())  p.description = juce::String::fromUTF8(obj["description"].get<std::string>().c_str());
         if (obj.contains("key_env")      && obj["key_env"].is_string())      p.keyEnv      = juce::String::fromUTF8(obj["key_env"].get<std::string>().c_str());
         if (obj.contains("max_tokens")   && obj["max_tokens"].is_number())   p.maxTokens   = obj["max_tokens"].get<int>();
+        if (obj.contains("timeout_sec")  && obj["timeout_sec"].is_number())  p.timeoutSec  = obj["timeout_sec"].get<int>();
         if (obj.contains("requires_key") && obj["requires_key"].is_boolean()) p.requiresKey = obj["requires_key"].get<bool>();
 
         // Minimum viable preset: name + url + provider + model

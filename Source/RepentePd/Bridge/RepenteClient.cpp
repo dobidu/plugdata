@@ -28,14 +28,24 @@ juce::String toHeaderBlock(std::vector<std::pair<std::string, std::string>> cons
 }
 
 // Blocking; callers run it on a detached thread. Returns the response body and sets
-// statusOut (0 when the connection itself failed and no response was received).
+// statusOut (0 when the connection itself failed and no response was received) and
+// timedOutOut (best-effort: whether the failure looks like it burned through the
+// full timeout budget rather than failing fast).
+//
+// withConnectionTimeoutMs() sets more than its name suggests: on Windows, JUCE's
+// WinINet backend applies the single value it's given to CONNECT_TIMEOUT as well as
+// RECEIVE/SEND/DATA_RECEIVE/DATA_SEND timeouts (juce_Network_windows.cpp), so this is
+// really a cap on the whole request — including the time spent waiting for a
+// non-streamed LLM completion to finish generating, not just opening the socket.
 juce::String httpRequest(juce::String const& url,
                          juce::String const& headerBlock,
                          juce::String const& postBody,
                          int timeoutSec,
-                         int& statusOut)
+                         int& statusOut,
+                         bool& timedOutOut)
 {
     statusOut = 0;
+    timedOutOut = false;
 
     auto const isPost = postBody.isNotEmpty();
     juce::URL request(url);
@@ -47,11 +57,28 @@ juce::String httpRequest(juce::String const& url,
                        .withConnectionTimeoutMs(timeoutSec * 1000)
                        .withStatusCode(&statusOut);
 
+    auto const startMs = juce::Time::getMillisecondCounterHiRes();
     auto stream = request.createInputStream(options);
-    if (stream == nullptr) return {};
+    if (stream == nullptr) {
+        auto const elapsedMs = juce::Time::getMillisecondCounterHiRes() - startMs;
+        // A genuine DNS failure / refused connection fails almost immediately;
+        // hitting the configured budget means the server was reachable but too
+        // slow (e.g. a long, non-streamed LLM completion) — worth telling apart
+        // so "raise the timeout" and "check the URL" aren't conflated.
+        timedOutOut = elapsedMs >= 0.9 * (double) timeoutSec * 1000.0;
+        return {};
+    }
 
     // Read the body even on non-2xx — providers carry their error detail in it.
     return stream->readEntireStreamAsString();
+}
+
+juce::String describeUnreachable(juce::String const& url, int timeoutSec, bool timedOut)
+{
+    if (timedOut)
+        return "error: timed out after " + juce::String(timeoutSec) + "s waiting for a response from "
+             + url + " (raise it with /config timeout <seconds>)";
+    return "error: could not reach " + url + " (connection failed — check the URL/network)";
 }
 
 } // namespace
@@ -161,10 +188,11 @@ bool RepenteClient::send(std::vector<Message> const& messages,
         juce::String result;
         try {
             int status = 0;
-            auto const body = httpRequest(url, headerBlock, bodyStr, timeoutSec, status);
+            bool timedOut = false;
+            auto const body = httpRequest(url, headerBlock, bodyStr, timeoutSec, status, timedOut);
 
             if (status == 0) {
-                result = "error: could not reach " + url + " (connection failed or timed out)";
+                result = describeUnreachable(url, timeoutSec, timedOut);
             } else if (status != 200) {
                 // Let provider extract structured error message from body.
                 auto parsedErr = prov->parseResponse(body.toStdString());
@@ -208,10 +236,12 @@ void RepenteClient::ping(std::function<void(bool, juce::String)> callback)
             prov->buildHeaders(cfg.apiKey, hdrs);
 
             int status = 0;
-            auto const body = httpRequest(url, toHeaderBlock(hdrs), {}, 5, status);
+            bool timedOut = false;
+            auto const body = httpRequest(url, toHeaderBlock(hdrs), {}, 5, status, timedOut);
 
             if (status == 0)
-                msg = "could not reach " + url + " (connection failed or timed out)";
+                msg = timedOut ? "timed out after 5s waiting for a response from " + url
+                               : "could not reach " + url + " (connection failed — check the URL/network)";
             else
                 msg = prov->parsePingResponse(body.toStdString(), status, ok);
         }

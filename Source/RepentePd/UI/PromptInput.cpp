@@ -237,6 +237,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  /config url <url>           \xe2\x86\x92 set server URL\n"
                 "  /config model <name>        \xe2\x86\x92 set model\n"
                 "  /config maxtokens <N>       \xe2\x86\x92 set max response tokens (default 4096)\n"
+                "  /config timeout <N>         \xe2\x86\x92 set request timeout in seconds (default 120)\n"
                 "  /config key <key>           \xe2\x86\x92 set API key (current provider)\n"
                 "  /config history on|off      \xe2\x86\x92 persist history across sessions\n"
                 "  /config autoplace on|off    \xe2\x86\x92 cursor placement (off = LLM coords)\n"
@@ -426,6 +427,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 "  url:        " + cfg.url + urlNote + "\n"
                 "  model:      " + cfg.model + "\n"
                 "  maxtokens:  " + juce::String(cfg.maxTokens) + "\n"
+                "  timeout:    " + juce::String(cfg.timeoutSec) + "s\n"
                 "  openai key:    " + juce::String(openaiKey.isNotEmpty()    ? "****" : "(not set)") + "\n"
                 "  anthropic key: " + juce::String(anthropicKey.isNotEmpty() ? "****" : "(not set)") + "\n"
                 "  history:    " + juce::String(persist ? "persist" : "session-only (default)") + "\n"
@@ -568,6 +570,23 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             return {};
         }
 
+        if (args.startsWith("timeout ")) {
+            int n = args.substring(8).trim().getIntValue();
+            if (n <= 0) {
+                pdInstance->logMessage("usage: /config timeout <positive integer seconds>");
+                return {};
+            }
+            SettingsFile::getInstance()->setProperty("repente_timeout_sec", n);
+            SettingsFile::getInstance()->saveSettings();
+            if (bridge) {
+                auto cfg = bridge->getConfig();
+                cfg.timeoutSec = n;
+                applyConfig(std::move(cfg));
+            }
+            pdInstance->logRepente(juce::String::fromUTF8("repente: timeout \xe2\x86\x92 ") + juce::String(n) + "s");
+            return {};
+        }
+
         if (args.startsWith("preset ")) {
             juce::String sub = args.substring(7).trim();
             if (sub == "list") {
@@ -608,6 +627,8 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             sf->setProperty("repente_provider",    RepentePd::RepenteClient::providerToString(provider));
             sf->setProperty("repente_model",       preset.model);
             sf->setProperty("repente_max_tokens",  preset.maxTokens);
+            if (preset.timeoutSec > 0)
+                sf->setProperty("repente_timeout_sec", preset.timeoutSec);
             juce::String key = sf->hasProperty(currentKeyProperty(provider))
                                    ? sf->getProperty<juce::String>(currentKeyProperty(provider)) : juce::String();
             sf->saveSettings();
@@ -617,6 +638,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
                 cfg.provider  = provider;
                 cfg.model     = preset.model;
                 cfg.maxTokens = preset.maxTokens;
+                if (preset.timeoutSec > 0) cfg.timeoutSec = preset.timeoutSec;
                 cfg.apiKey    = key;
                 applyConfig(std::move(cfg));
             }
@@ -697,6 +719,7 @@ SmallArray<std::pair<int, String>> PromptInput::executeCommand(pd::Instance* pdI
             "  /config url <url>                \xe2\x86\x92 set server URL\n"
             "  /config model <name>             \xe2\x86\x92 set model name\n"
             "  /config maxtokens <N>            \xe2\x86\x92 set max response tokens\n"
+            "  /config timeout <N>              \xe2\x86\x92 set request timeout in seconds (default 120)\n"
             "  /config key <key>                \xe2\x86\x92 set API key (current provider)\n"
             "  /config history on|off           \xe2\x86\x92 persist history across sessions\n"
             "  /config autoplace on|off         \xe2\x86\x92 cursor placement (off = use LLM coords)\n"

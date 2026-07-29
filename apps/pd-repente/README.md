@@ -240,6 +240,7 @@ Prints the pd-file snapshot that will be sent to the LLM as system context on th
 | `/config url <url>` | Set server URL |
 | `/config model <name>` | Set model name |
 | `/config maxtokens <N>` | Set max response tokens (default 4096) |
+| `/config timeout <N>` | Set request timeout in seconds (default 120) |
 | `/config key <key>` | Set API key for current provider (stored per-provider, masked in display) |
 | `/config test` | Ping server and verify connectivity |
 | `/config history on\|off` | Persist conversation history across restarts |

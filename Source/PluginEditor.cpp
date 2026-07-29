@@ -294,6 +294,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         if (sf->hasProperty("repente_provider"))
             cfg.provider = RepentePd::RepenteClient::providerFromString(sf->getProperty<String>("repente_provider"));
         if (sf->hasProperty("repente_max_tokens"))  cfg.maxTokens = (int) sf->getProperty<int>("repente_max_tokens");
+        if (sf->hasProperty("repente_timeout_sec")) cfg.timeoutSec = (int) sf->getProperty<int>("repente_timeout_sec");
 
         // Migration: old `repente_key` → provider-specific slot (defaults to OpenAI).
         {

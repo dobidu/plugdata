@@ -24,7 +24,7 @@ public:
         juce::String model;
         juce::String apiKey;
         Provider     provider   = Provider::OpenAI;
-        int          timeoutSec = 30;
+        int          timeoutSec = 120;
         int          maxTokens  = 4096;
 
         Config() : url("http://localhost:11434"), model("llama3.2") {}

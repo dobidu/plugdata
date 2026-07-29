@@ -21,7 +21,7 @@ struct LlmRequest {
     juce::String model;
     juce::String apiKey;
     int          maxTokens  = 4096;
-    int          timeoutSec = 30;
+    int          timeoutSec = 120;
 };
 
 // Provider-agnostic LLM interface.
