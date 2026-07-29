@@ -193,6 +193,8 @@ private:
         { "repente_persist_history", var(false) },
         { "repente_history", var("") },
         { "repente_autoplace", var(true) },
+        { "repente_verbose", var(false) },
+        { "repente_rewrite", var(true) },
     };
 
 public:

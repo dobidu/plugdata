@@ -103,6 +103,7 @@ tests run and gate every push, `pd-repente CI` green on all three OSes ✓
 - Fix `PlugDataWindow::closeAllPatches()` link error on Arch (header-defined non-inline fn) — upstream-side
 - Refresh preset model IDs to current generation (`claude-opus-5`, `claude-sonnet-5`)
 - Run RepentePd tests on macOS + Windows CI (Linux-only today)
+- Lexical Pd knowledge base injected as retrieval context (canonical object chains for FM/AM/filters/envelopes/…), keyword-matched, no embeddings — deferred so `PromptNormalizer` can be evaluated as the single changed variable first
 - Live coding latency (P2 persona)
 - Tier 3: PatchBox / Orange Pi (3B distilled)
 - SC/MAX cross-language (when Repente reincorporates)

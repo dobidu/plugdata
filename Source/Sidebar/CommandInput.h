@@ -123,6 +123,7 @@ public:
 
         char const* error = lua_tostring(L, -1);
         pd->logError("Lua error: " + String::fromUTF8(error));
+        pd->logError("Lua expression: " + expression.trim());
         lua_pop(L, 1); // Remove error message from stack
         return "";     // Return empty string on error
     }
@@ -437,7 +438,18 @@ public:
 
             parsedMessage += message.substring(startPos, openBrace);
 
-            auto const closeBrace = message.indexOf(openBrace, "}");
+            // Scan for the matching closing brace, accounting for nested '{'/'}'
+            // so a Lua expression that itself contains braces (tables, or stray
+            // braces from a misclassified non-Lua response) isn't cut short.
+            int depth = 1;
+            int scanPos = openBrace + 1;
+            while (scanPos < message.length() && depth > 0) {
+                auto const c = message[scanPos];
+                if (c == '{') depth++;
+                else if (c == '}') depth--;
+                if (depth > 0) scanPos++;
+            }
+            auto const closeBrace = depth == 0 ? scanPos : -1;
             if (closeBrace == -1) {
                 editor->pd->logError("Unmatched '{' in expression.");
                 parsedMessage += message.substring(openBrace); // Append remaining message as-is

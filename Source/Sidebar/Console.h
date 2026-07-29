@@ -10,6 +10,7 @@
 #include "Components/BouncingViewport.h"
 #include "Object.h"
 #include "Objects/ObjectBase.h"
+#include "RepentePd/Bridge/VerboseLog.h"
 
 class ConsoleSettings final : public Component {
 public:
@@ -191,6 +192,30 @@ public:
                         auto* editor = findParentComponentOfClass<PluginEditor>();
                         editor->highlightSearchTarget(target, true);
                     });
+
+                    // repente verbose lines ("repente: <prompt> [#N]") carry a trailing
+                    // "[#N]" tag linking back to the full request/response text recorded
+                    // by RepentePd::VerboseLog, kept out of the console itself to avoid
+                    // dumping huge text on every turn.
+                    auto const bracketStart = message.lastIndexOf("[#");
+                    if (bracketStart != -1 && message.endsWith("]")) {
+                        auto const idStr = message.substring(bracketStart + 2, message.length() - 1);
+                        RepentePd::VerboseTurn turn;
+                        if (idStr.containsOnly("0123456789") && RepentePd::VerboseLog::find(idStr.getIntValue(), turn)) {
+                            menu.addItem("Show full request/response", [this, turn] {
+                                auto textEditor = std::make_unique<TextEditor>();
+                                textEditor->setMultiLine(true);
+                                textEditor->setReadOnly(true);
+                                textEditor->setScrollbarsShown(true);
+                                textEditor->setText("== request ==\n" + turn.request
+                                    + "\n\n== response (" + juce::String(turn.elapsedMs / 1000.0, 2) + "s) ==\n" + turn.response);
+                                textEditor->setSize(500, 400);
+                                if (auto* editor = findParentComponentOfClass<PluginEditor>())
+                                    editor->showCalloutBox(std::move(textEditor), getScreenBounds());
+                            });
+                        }
+                    }
+
                     menu.showMenuAsync(PopupMenu::Options().withTargetComponent(this));
                 }
 

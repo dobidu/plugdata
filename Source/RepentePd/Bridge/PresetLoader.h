@@ -17,6 +17,7 @@ struct Preset {
     juce::String description;
     juce::String keyEnv;        // env var name (e.g. "ANTHROPIC_API_KEY"); empty if local
     int          maxTokens   = 4096;
+    int          timeoutSec  = 0;   // 0 = unset; leaves the current /config timeout untouched
     bool         requiresKey = false;
 };
 

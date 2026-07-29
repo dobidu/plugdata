@@ -21,12 +21,12 @@ struct LlmRequest {
     juce::String model;
     juce::String apiKey;
     int          maxTokens  = 4096;
-    int          timeoutSec = 30;
+    int          timeoutSec = 120;
 };
 
 // Provider-agnostic LLM interface.
 // Each provider knows its own endpoint paths, auth scheme, body shape, and response parsing.
-// RepenteClient owns one of these and handles transport (URL parse, httplib POST/GET).
+// RepenteClient owns one of these and handles transport (URL join, juce::URL POST/GET).
 class ILlmProvider {
 public:
     virtual ~ILlmProvider() = default;

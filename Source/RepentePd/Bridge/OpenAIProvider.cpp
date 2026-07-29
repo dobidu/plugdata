@@ -51,7 +51,7 @@ juce::String OpenAIProvider::parseResponse(std::string const& body) const
         std::string msg = err.is_object() && err.contains("message")
                               ? err["message"].get<std::string>()
                               : err.dump();
-        return juce::String("error: ") + juce::String(msg.c_str());
+        return juce::String("error: ") + juce::String::fromUTF8(msg.c_str());
     }
 
     if (!resp.contains("choices") || !resp["choices"].is_array() || resp["choices"].empty())
@@ -61,7 +61,7 @@ juce::String OpenAIProvider::parseResponse(std::string const& body) const
     if (!choice0.contains("message") || !choice0["message"].contains("content"))
         return "error: response missing message.content";
 
-    return juce::String(choice0["message"]["content"].get<std::string>().c_str());
+    return juce::String::fromUTF8(choice0["message"]["content"].get<std::string>().c_str());
 }
 
 juce::String OpenAIProvider::parsePingResponse(std::string const& body, int httpStatus, bool& ok) const

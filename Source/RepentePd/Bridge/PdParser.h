@@ -15,6 +15,7 @@ enum class NoPatchReason {
     None,
     Prose,          // plain text — the model answered instead of emitting a patch
     PatchFragment,  // #X lines present but no #N canvas header — truncated generation
+    InvalidLua,     // Lua-shaped, but luaL_loadstring rejected it (often another language)
     Empty           // nothing left after stripping fences
 };
 
@@ -22,6 +23,10 @@ struct ParsedResponse {
     ResponseType type;
     juce::String content; // stripped of markdown fences
     NoPatchReason reason = NoPatchReason::None;
+    // Non-empty lines dropped by extractPatch() because they sat outside the
+    // patch body. Non-zero means the model padded its reply; Bridge logs it so
+    // a silently-truncated response is still visible.
+    int discardedLines = 0;
 };
 
 class PdParser {
@@ -38,7 +43,12 @@ private:
     // Returns the fence info tag ("pd", "lua", ...) or an empty string.
     static juce::String fenceTag(juce::String const& s);
     static juce::String stripFences(juce::String const& s);
+    // Slices out just the Pd records, discarding anything before the "#N canvas"
+    // header or after the last record. Sets outDiscarded to the number of
+    // non-empty lines dropped.
+    static juce::String extractPatch(juce::String const& s, int& outDiscarded);
     static bool looksLikeLua(juce::String const& s);
+    static bool isValidLua(juce::String const& s);
 };
 
 } // namespace RepentePd

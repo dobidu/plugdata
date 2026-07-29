@@ -456,11 +456,8 @@ target_include_directories(plugdata_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Test
 target_link_libraries(plugdata_core PUBLIC ${libs})
 target_include_directories(plugdata_core PUBLIC ${PLUGDATA_INCLUDE_DIRECTORY})
 
-# OpenSSL for cpp-httplib HTTPS support (optional — falls back to HTTP if not found)
-find_package(OpenSSL QUIET)
-if(OpenSSL_FOUND)
-    target_link_libraries(plugdata_core PRIVATE OpenSSL::SSL OpenSSL::Crypto)
-endif()
+# NOTE: pd-repente's HTTP transport is juce::URL (platform TLS stack), so no OpenSSL
+# dependency is needed here. cpp-httplib is no longer used by Source/RepentePd.
 include_directories(./Libraries/nanovg/src/)
 
 foreach(core_SOURCE ${plugdata_sources})
