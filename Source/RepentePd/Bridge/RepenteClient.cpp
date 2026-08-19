@@ -3,12 +3,22 @@
  // pd-repente — see LICENSE.txt
 */
 
+// httplib must come first, and the order is load-bearing on Windows.
+// Config.h does `using namespace juce`, which brings juce::ssize_t into
+// unqualified lookup. On 32-bit MSVC httplib declares its own
+// `using ssize_t = long` at global scope while juce's is pointer_sized_int
+// (32-bit), so the two differ and httplib's internal uses of ssize_t become
+// ambiguous — C2872. Including httplib before the juce-pulling headers means
+// its own declaration is the only one visible inside it. As a bonus this keeps
+// winsock2.h (via httplib) ahead of windows.h (via juce), which is the order
+// Winsock requires anyway.
+#include <cpp-httplib/httplib.h>
+
 #include "Utility/Config.h"
 #include "RepenteClient.h"
 #include "OpenAIProvider.h"
 #include "AnthropicProvider.h"
 
-#include <cpp-httplib/httplib.h>
 #include <thread>
 
 namespace RepentePd {
