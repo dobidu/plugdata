@@ -56,15 +56,17 @@ Resume file: .paul/ROADMAP.md
 - ObjectTreePanel doesn't scan sub-patches (CanvasSerializer now does — Phase 07-01)
 - Windows/Linux smoke tests — manual, deferred post-V1
 - RepentePd tests run on Linux CI only; macOS/Windows jobs build but don't test
-- **`windows-32-build` red — this is pd-repente's own bug.** `error C2872: 'ssize_t': ambiguous
+- **`windows-32-build` — FIXED in PR #6 (`f3fb4f96f`), pending merge.** Was pd-repente's own bug. `error C2872: 'ssize_t': ambiguous
   symbol` compiling `Source/RepentePd/Bridge/RepenteClient.cpp`: `long ssize_t` from
   `Libraries/cpp-httplib/httplib.h:143` vs `juce::ssize_t` from
   `Libraries/JUCE/modules/juce_core/maths/juce_MathsFunctions.h:98`. 32-bit MSVC only — the
   64-bit Windows job passes. Arrived with RepenteClient in Phase 03, not with PR #4. Candidate
   fixes: include `httplib.h` ahead of the JUCE headers in that TU, or gate with
-  `_SSIZE_T_DEFINED`. Untestable locally (no 32-bit MSVC), so each attempt costs a ~45 min CI
-  round trip — batch it with other Windows work.
-- **`Arch-x64` / `Arch-aarch64` red — plugdata's own, not pd-repente.** `undefined reference to
+  `_SSIZE_T_DEFINED`. Fixed by the former: httplib now precedes the JUCE headers in that TU.
+  `windows-32-build` verified green on PR #6 — it had been red since Phase 03.
+- **`Arch-x64` / `Arch-aarch64` / `OpenSUSE-Tumbleweed-x64` / `-aarch64` red — plugdata's own,
+  not pd-repente. One bug, four jobs, and spreading (OpenSUSE was green until 2026-08-19, which
+  fits stricter binutils rather than any source change).** `undefined reference to
   PlugDataWindow::closeAllPatches()`; defined in `Source/Standalone/PlugDataApp.h:233`, declared
   `Source/Standalone/PlugDataWindow.h:514`, called `:510`. A non-inline definition in a header,
   so it links only where that header is compiled — Arch's build reaches the call without the
@@ -73,7 +75,25 @@ Resume file: .paul/ROADMAP.md
   touching it.
 - Preset model IDs previous-generation (`claude-opus-4-7`, `claude-sonnet-4-6`); active and error-free, refresh to `claude-opus-5` / `claude-sonnet-5`
 - `/listen` lambda captures raw Bridge*/PluginProcessor* — edge case: plugin destroyed while 3.2s timer pending
-- Branch topology: `develop` is trunk; `pd-repente-main` is stale at `dbb1255b9` and should be deleted or fast-forwarded
+- Branch topology: `develop` is trunk. `pd-repente-main`, `feat/ci-run-tests`, and
+  `fix/ci-linux-glu` were deleted 2026-07-27 after verifying each was fully contained in develop.
+
+## Snapshot / Demo Environment (2026-08-19)
+
+- **WSL2 has no audio** — no ALSA cards, no PulseAudio, JACK absent. plugdata runs
+  under WSLg and renders patches, but produces no sound, so `/listen` captures
+  silence and any C3/multimodal figure is meaningless there. Capture figures on
+  macOS (real audio, built-in `screencapture` + `osascript`, 2x pixel density).
+- **v0.7 is not directly servable** — LoRA adapter only (r=32/alpha=64); its
+  `adapter_config.json` base is `/workspace/models/base`, a container path. Needs
+  base HF weights -> peft merge -> GGUF convert -> quantize -> ollama create.
+- **A bare Repente GGUF import answers in SuperCollider** a good share of the time:
+  the training system prompt is multi-language ("SuperCollider, Pure Data, and
+  MAX/MSP") and pd-repente sends no instructional system prompt of its own. Fixed
+  by baking a Pd constraint into the Ollama model — see
+  `apps/pd-repente/scripts/Modelfile.repente-pd`.
+- Snapshot kit: `apps/pd-repente/docs/SNAPSHOTS.md` +
+  `apps/pd-repente/scripts/snapshot-session.sh` (macOS automation).
 
 ## Accumulated Context
 
@@ -102,5 +122,6 @@ Resume file: .paul/ROADMAP.md
 - CMake must emit ENABLE_TESTING=1/0 — bare `ON` is 0 to the preprocessor (Phase 07-03)
 
 ### Git State
-Last commit: 2bbf96810 (`feat/ci-run-tests`), merged to `origin/develop` as 977cd96e5 (PR #3)
-Trunk: `develop`
+Trunk: `develop` at `aa41ddd17` (PR #4 merged: parser NO_PATCH, CI trigger, macOS ffmpeg).
+Open: PR #6 `fix/win32-ssize-t` (`f3fb4f96f`) — windows-32-build green, awaiting merge.
+Open: PR #7 `docs/snapshot-kit` — this snapshot kit.
